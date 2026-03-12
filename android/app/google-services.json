@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "383983416768",
+    "project_id": "esport-tournament-app-3266f",
+    "storage_bucket": "esport-tournament-app-3266f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:383983416768:android:174c430657977455388425",
+        "android_client_info": {
+          "package_name": "com.example.esport_tournament_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDvZ7y-1-Getr8kYaG1m3PrZrXnkcPmbbI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
