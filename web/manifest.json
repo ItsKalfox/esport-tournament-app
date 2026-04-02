@@ -1,6 +1,6 @@
 {
-    "name": "esport_tournament_app",
-    "short_name": "esport_tournament_app",
+    "name": "onboardings",
+    "short_name": "onboardings",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
