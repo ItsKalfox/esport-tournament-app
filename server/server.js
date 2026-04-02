@@ -180,7 +180,7 @@ app.use((err, req, res, next) => {
 
 // ─── Start server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`\n🚀 Esports Store Server running at http://localhost:${PORT}`);
-  console.log(`📁 Images served from: http://localhost:${PORT}/images/`);
-  console.log(`💳 Stripe: ${process.env.STRIPE_SECRET_KEY ? '✅ configured' : '❌ missing STRIPE_SECRET_KEY'}\n`);
+  console.log(`\n Esports Store Server running at http://localhost:${PORT}`);
+  console.log(` Images served from: http://localhost:${PORT}/images/`);
+  console.log(` Stripe: ${process.env.STRIPE_SECRET_KEY ? 'configured' : '❌ missing STRIPE_SECRET_KEY'}\n`);
 });
