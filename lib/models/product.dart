@@ -44,19 +44,12 @@ class ProductModel {
 
   String get primaryImage => images.isNotEmpty ? images[0] : imageUrl;
 
-  // Fixes localhost URLs for real device testing
-  // Change '192.168.8.100' to your PC's IP
-  // When deployed to Render.com, remove this — URLs will be public
-  static String _fixUrl(String url) {
-    return url.replaceAll('localhost', '192.168.8.100');
-  }
-
   factory ProductModel.fromFirestore(Map<String, dynamic> data, String id) {
     List<String> imagesList = [];
     if (data['images'] is List) {
       imagesList = List<String>.from(
         (data['images'] as List).whereType<String>(),
-      ).map((url) => _fixUrl(url)).toList();
+      );
     }
 
     List<Map<String, String>> specs = [];
@@ -84,7 +77,7 @@ class ProductModel {
       id: id,
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      imageUrl: _fixUrl(data['imageUrl'] ?? ''),
+      imageUrl: data['imageUrl'] ?? '',
       price: (data['price'] ?? 0).toDouble(),
       originalPrice: data['originalPrice'] != null
           ? (data['originalPrice']).toDouble()
