@@ -1,7 +1,6 @@
-
 // new_password.dart
 import 'package:flutter/material.dart';
-import '../../widgets/Shared widgets.dart';
+import '../../widgets/Shared_widgets.dart';
 import '../signup/login.dart';
 
 class NewPasswordPage extends StatefulWidget {
@@ -179,12 +178,9 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        _match
-                            ? 'Passwords match'
-                            : 'Passwords do not match',
+                        _match ? 'Passwords match' : 'Passwords do not match',
                         style: TextStyle(
-                          color:
-                              _match ? AppColors.success : AppColors.error,
+                          color: _match ? AppColors.success : AppColors.error,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -194,8 +190,7 @@ class _NewPasswordPageState extends State<NewPasswordPage> {
                 ],
 
                 const SizedBox(height: 28),
-                PrimaryButton(
-                    label: 'Save New Password', onTap: _submit),
+                PrimaryButton(label: 'Save New Password', onTap: _submit),
               ],
             ),
           ),

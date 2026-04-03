@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import 'firebase_options.dart';
-
+import 'providers/cart_provider.dart';
 import 'services/stripe_service.dart';
 import 'pages/main_shell.dart';
-
-import 'package:firebase_auth/firebase_auth.dart';
-import '.../../pages/signup/login.dart';
+import 'pages/signup/login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,22 +20,26 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Esport Tournament',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFF0F0F0F),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFFF8400),
-          surface: Color(0xFF181818),
+    return ChangeNotifierProvider(
+      create: (_) => CartProvider(),
+      child: MaterialApp(
+        title: 'Esport Tournament',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          scaffoldBackgroundColor: const Color(0xFF0F0F0F),
+          colorScheme: const ColorScheme.dark(
+            primary: Color(0xFFFF8400),
+            surface: Color(0xFF181818),
+          ),
+          useMaterial3: true,
         ),
+        home: const _AuthGate(),
       ),
-      home: const _AuthGate(),
     );
   }
 }
 
-// ─── Auth Gate ────────────────────────────────────────────────────
+// ─── Auth Gate ────────────────────────────────────────────────────────────────
 // Listens to Firebase auth state:
 //   - User already logged in  → goes straight to MainShell
 //   - User not logged in      → shows LoginPage
@@ -65,7 +69,7 @@ class _AuthGate extends StatelessWidget {
   }
 }
 
-// ─── Splash Screen ────────────────────────────────────────────────
+// ─── Splash Screen ────────────────────────────────────────────────────────────
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
 
@@ -77,7 +81,6 @@ class _SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Replace with your app logo if you have one
             Icon(Icons.sports_esports, color: Color(0xFFFF8400), size: 64),
             SizedBox(height: 24),
             CircularProgressIndicator(color: Color(0xFFFF8400), strokeWidth: 2),

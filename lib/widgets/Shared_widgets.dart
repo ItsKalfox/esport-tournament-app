@@ -31,13 +31,19 @@ class Validators {
   static List<_PasswordRule> passwordRules(String value) {
     return [
       _PasswordRule('At least 8 characters', value.length >= 8),
-      _PasswordRule('One uppercase letter (A-Z)',
-          RegExp(r'[A-Z]').hasMatch(value)),
       _PasswordRule(
-          'One lowercase letter (a-z)', RegExp(r'[a-z]').hasMatch(value)),
+        'One uppercase letter (A-Z)',
+        RegExp(r'[A-Z]').hasMatch(value),
+      ),
+      _PasswordRule(
+        'One lowercase letter (a-z)',
+        RegExp(r'[a-z]').hasMatch(value),
+      ),
       _PasswordRule('One number (0-9)', RegExp(r'[0-9]').hasMatch(value)),
-      _PasswordRule('One special character (!@#\$...)',
-          RegExp(r'[!@#\$&*~%^()_\-+=<>?/]').hasMatch(value)),
+      _PasswordRule(
+        'One special character (!@#\$...)',
+        RegExp(r'[!@#\$&*~%^()_\-+=<>?/]').hasMatch(value),
+      ),
     ];
   }
 
@@ -104,8 +110,10 @@ class AuthCard extends StatelessWidget {
           child: Center(
             child: SingleChildScrollView(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 24,
+                ),
                 child: Container(
                   decoration: BoxDecoration(
                     color: AppColors.card,
@@ -160,7 +168,9 @@ class AuthHeader extends StatelessWidget {
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 6),
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.18),
                       borderRadius: BorderRadius.circular(8),
@@ -168,14 +178,20 @@ class AuthHeader extends StatelessWidget {
                     child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.arrow_back_ios_new_rounded,
-                            size: 13, color: Colors.white),
+                        Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          size: 13,
+                          color: Colors.white,
+                        ),
                         SizedBox(width: 4),
-                        Text('Back',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500)),
+                        Text(
+                          'Back',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -281,21 +297,18 @@ class _AuthTextFieldState extends State<AuthTextField> {
           cursorColor: AppColors.orange,
           decoration: InputDecoration(
             hintText: widget.hint,
-            hintStyle:
-                const TextStyle(color: Color(0xFF444444), fontSize: 14),
+            hintStyle: const TextStyle(color: Color(0xFF444444), fontSize: 14),
             filled: true,
             fillColor: AppColors.inputBg,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            errorText: widget.errorText,
-            errorStyle: const TextStyle(
-              color: AppColors.error,
-              fontSize: 11,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
             ),
+            errorText: widget.errorText,
+            errorStyle: const TextStyle(color: AppColors.error, fontSize: 11),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide:
-                  const BorderSide(color: AppColors.border, width: 1.5),
+              borderSide: const BorderSide(color: AppColors.border, width: 1.5),
             ),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -352,10 +365,14 @@ class PasswordRulesWidget extends StatelessWidget {
             final score = Validators.passwordStrength(password);
             Color barColor;
             if (i < score) {
-              if (score <= 1) barColor = AppColors.error;
-              else if (score <= 2) barColor = AppColors.warning;
-              else if (score <= 3) barColor = AppColors.info;
-              else barColor = AppColors.success;
+              if (score <= 1)
+                barColor = AppColors.error;
+              else if (score <= 2)
+                barColor = AppColors.warning;
+              else if (score <= 3)
+                barColor = AppColors.info;
+              else
+                barColor = AppColors.success;
             } else {
               barColor = AppColors.border;
             }
@@ -373,28 +390,30 @@ class PasswordRulesWidget extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         // Rules list
-        ...rules.map((r) => Padding(
-              padding: const EdgeInsets.only(bottom: 5),
-              child: Row(
-                children: [
-                  Icon(
-                    r.passed
-                        ? Icons.check_circle_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    size: 13,
+        ...rules.map(
+          (r) => Padding(
+            padding: const EdgeInsets.only(bottom: 5),
+            child: Row(
+              children: [
+                Icon(
+                  r.passed
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  size: 13,
+                  color: r.passed ? AppColors.success : AppColors.muted,
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  r.label,
+                  style: TextStyle(
                     color: r.passed ? AppColors.success : AppColors.muted,
+                    fontSize: 12,
                   ),
-                  const SizedBox(width: 7),
-                  Text(
-                    r.label,
-                    style: TextStyle(
-                      color: r.passed ? AppColors.success : AppColors.muted,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            )),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -425,8 +444,9 @@ class PrimaryButton extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 15),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
         child: isLoading
             ? const SizedBox(
@@ -440,9 +460,10 @@ class PrimaryButton extends StatelessWidget {
             : Text(
                 label.toUpperCase(),
                 style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.2,
+                ),
               ),
       ),
     );
@@ -466,7 +487,8 @@ class GoogleButton extends StatelessWidget {
           backgroundColor: AppColors.card2,
           padding: const EdgeInsets.symmetric(vertical: 13),
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12)),
+            borderRadius: BorderRadius.circular(12),
+          ),
           side: const BorderSide(color: AppColors.border, width: 1.5),
         ),
         child: isLoading
@@ -490,9 +512,10 @@ class GoogleButton extends StatelessWidget {
                   const Text(
                     'Continue with Google',
                     style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500),
+                      color: AppColors.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ],
               ),
@@ -509,16 +532,36 @@ class _GooglePainter extends CustomPainter {
     final r = size.width / 2;
     paint.color = const Color(0xFF4285F4);
     canvas.drawArc(
-        Rect.fromCircle(center: c, radius: r), -0.5, 3.14, true, paint);
+      Rect.fromCircle(center: c, radius: r),
+      -0.5,
+      3.14,
+      true,
+      paint,
+    );
     paint.color = const Color(0xFFEA4335);
     canvas.drawArc(
-        Rect.fromCircle(center: c, radius: r), -1.6, 1.8, true, paint);
+      Rect.fromCircle(center: c, radius: r),
+      -1.6,
+      1.8,
+      true,
+      paint,
+    );
     paint.color = const Color(0xFFFBBC05);
     canvas.drawArc(
-        Rect.fromCircle(center: c, radius: r), 1.9, 1.1, true, paint);
+      Rect.fromCircle(center: c, radius: r),
+      1.9,
+      1.1,
+      true,
+      paint,
+    );
     paint.color = const Color(0xFF34A853);
     canvas.drawArc(
-        Rect.fromCircle(center: c, radius: r), 3.0, 0.9, true, paint);
+      Rect.fromCircle(center: c, radius: r),
+      3.0,
+      0.9,
+      true,
+      paint,
+    );
     paint.color = AppColors.card2;
     canvas.drawCircle(c, r * 0.55, paint);
   }
@@ -538,8 +581,10 @@ class OrDivider extends StatelessWidget {
         Expanded(child: Divider(color: AppColors.border, thickness: 1)),
         Padding(
           padding: EdgeInsets.symmetric(horizontal: 12),
-          child: Text('or',
-              style: TextStyle(color: AppColors.muted, fontSize: 12)),
+          child: Text(
+            'or',
+            style: TextStyle(color: AppColors.muted, fontSize: 12),
+          ),
         ),
         Expanded(child: Divider(color: AppColors.border, thickness: 1)),
       ],
@@ -568,8 +613,7 @@ class FooterLink extends StatelessWidget {
         child: RichText(
           text: TextSpan(
             text: text,
-            style:
-                const TextStyle(color: AppColors.muted, fontSize: 13),
+            style: const TextStyle(color: AppColors.muted, fontSize: 13),
             children: [
               TextSpan(
                 text: linkText,

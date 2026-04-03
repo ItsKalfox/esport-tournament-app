@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../widgets/Shared widgets.dart';
+import '../../widgets/Shared_widgets.dart';
 import '../../services/auth_service.dart';
 import '../main_shell.dart';
 import '../auth/forgot _password.dart';
@@ -38,13 +38,11 @@ class _LoginPageState extends State<LoginPage> {
 
   void _validatePassword(String value) {
     if (!_passTouched) return;
-    setState(() =>
-        _passError = value.isEmpty ? 'Password is required' : null);
+    setState(() => _passError = value.isEmpty ? 'Password is required' : null);
   }
 
   bool _isFormValid() =>
-      Validators.email(_emailCtrl.text) == null &&
-      _passCtrl.text.isNotEmpty;
+      Validators.email(_emailCtrl.text) == null && _passCtrl.text.isNotEmpty;
 
   // ── Firebase Email Login ──────────────────────────────────────
   Future<void> _handleLogin() async {
@@ -52,8 +50,7 @@ class _LoginPageState extends State<LoginPage> {
       _emailTouched = true;
       _passTouched = true;
       _emailError = Validators.email(_emailCtrl.text);
-      _passError =
-          _passCtrl.text.isEmpty ? 'Password is required' : null;
+      _passError = _passCtrl.text.isEmpty ? 'Password is required' : null;
     });
 
     if (!_isFormValid()) return;
@@ -99,7 +96,8 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (!mounted) return;
-      final name = credential.user?.displayName ?? credential.user?.email ?? 'User';
+      final name =
+          credential.user?.displayName ?? credential.user?.email ?? 'User';
       _showSnackbar('Welcome, $name! 🎮', AppColors.success);
 
       Navigator.pushAndRemoveUntil(
@@ -112,7 +110,10 @@ class _LoginPageState extends State<LoginPage> {
       _showSnackbar(AuthService.getErrorMessage(e.code), AppColors.error);
     } catch (e) {
       if (!mounted) return;
-      _showSnackbar('Google sign-in failed. Please try again.', AppColors.error);
+      _showSnackbar(
+        'Google sign-in failed. Please try again.',
+        AppColors.error,
+      );
     } finally {
       if (mounted) setState(() => _isGoogleLoading = false);
     }
@@ -124,8 +125,7 @@ class _LoginPageState extends State<LoginPage> {
         content: Text(message, style: const TextStyle(color: Colors.white)),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -176,7 +176,8 @@ class _LoginPageState extends State<LoginPage> {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const ForgotPasswordPage()),
+                        builder: (_) => const ForgotPasswordPage(),
+                      ),
                     ),
                     child: const Text(
                       'Forgot Password?',

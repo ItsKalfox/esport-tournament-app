@@ -1,7 +1,6 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../widgets/Shared widgets.dart';
+import '../../widgets/Shared_widgets.dart';
 import 'new_password.dart';
 import '../signup/sign _up.dart';
 
@@ -84,7 +83,9 @@ class _VertifyPageState extends State<VertifyPage> {
                     text: TextSpan(
                       text: "Didn't receive it? ",
                       style: const TextStyle(
-                          color: AppColors.muted, fontSize: 13),
+                        color: AppColors.muted,
+                        fontSize: 13,
+                      ),
                       children: [
                         WidgetSpan(
                           child: GestureDetector(
@@ -116,8 +117,7 @@ class _VertifyPageState extends State<VertifyPage> {
                   label: 'Verify & Continue',
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (_) => const NewPasswordPage()),
+                    MaterialPageRoute(builder: (_) => const NewPasswordPage()),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -171,10 +171,7 @@ class _OtpBox extends StatelessWidget {
           width: 1.5,
         ),
         boxShadow: isFilled
-            ? [
-                const BoxShadow(
-                    color: Color(0x33FF8400), blurRadius: 8)
-              ]
+            ? [const BoxShadow(color: Color(0x33FF8400), blurRadius: 8)]
             : [],
       ),
       child: TextField(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../widgets/Shared widgets.dart';
+import '../../widgets/Shared_widgets.dart';
 import '../../services/auth_service.dart';
 import '../signup/sign _up.dart';
 
@@ -86,8 +86,11 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
           ),
           child: Column(
             children: [
-              const Icon(Icons.mark_email_read_outlined,
-                  color: AppColors.success, size: 48),
+              const Icon(
+                Icons.mark_email_read_outlined,
+                color: AppColors.success,
+                size: 48,
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Check your inbox',
@@ -162,9 +165,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         const SizedBox(height: 20),
         const OrDivider(),
         const SizedBox(height: 20),
-        GoogleButton(
-          onTap: () {},
-        ),
+        GoogleButton(onTap: () {}),
         const SizedBox(height: 20),
         FooterLink(
           text: 'Have an account? ',

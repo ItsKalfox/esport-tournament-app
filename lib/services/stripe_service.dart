@@ -1,32 +1,54 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class StripeService {
   static const String _publishableKey =
       'pk_test_51TFI36FovDiZH4SL5c7kkzysskCQLqjEazH7bqDHFlegKvRXGePz5GXq1vcO9V82ZCCQzo25zJXmORaRdrvJK85p00QPgonLDm';
+
+  // Firebase Cloud Function URL
+  // Format: https://REGION-PROJECT_ID.cloudfunctions.net/FUNCTION_NAME
+  static const String _functionUrl =
+      'https://us-central1-esport-tournament-app-3266f.cloudfunctions.net/createPaymentIntent';
 
   static void init() {
     Stripe.publishableKey = _publishableKey;
     Stripe.merchantIdentifier = 'esports_store';
   }
 
-  // ── Create Payment Intent via Firebase Cloud Function ─────────────────────
+  // ── Create Payment Intent via HTTP call with auth token ───────────────────
   Future<String?> createPaymentIntent({
     required double amount,
     required String orderId,
     String currency = 'lkr',
   }) async {
     try {
-      final callable = FirebaseFunctions.instance.httpsCallable(
-        'createPaymentIntent',
+      // Get Firebase auth token
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      debugPrint('Auth token exists: ${token != null}');
+
+      final response = await http.post(
+        Uri.parse(_functionUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'data': {'amount': amount, 'currency': currency, 'orderId': orderId},
+        }),
       );
-      final result = await callable.call({
-        'amount': amount,
-        'currency': currency,
-        'orderId': orderId,
-      });
-      return result.data['clientSecret'] as String?;
+
+      debugPrint('Function response: ${response.statusCode} ${response.body}');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        return json['result']?['clientSecret'] as String?;
+      } else {
+        debugPrint('Function error: ${response.body}');
+        return null;
+      }
     } catch (e) {
       debugPrint('Error creating payment intent: $e');
       return null;
@@ -40,7 +62,6 @@ class StripeService {
     required String customerEmail,
   }) async {
     try {
-      // 1. Get client secret from Firebase Cloud Function
       final clientSecret = await createPaymentIntent(
         amount: amount,
         orderId: orderId,
@@ -52,7 +73,6 @@ class StripeService {
         );
       }
 
-      // 2. Initialize payment sheet
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
@@ -82,7 +102,6 @@ class StripeService {
         ),
       );
 
-      // 3. Present payment sheet
       await Stripe.instance.presentPaymentSheet();
       return PaymentResult.success(clientSecret);
     } on StripeException catch (e) {

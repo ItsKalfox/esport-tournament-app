@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../widgets/Shared widgets.dart';
+import '../../widgets/Shared_widgets.dart';
 import '../../services/auth_service.dart';
 import 'login.dart';
 
@@ -45,7 +45,9 @@ class _SignupPageState extends State<SignupPage> {
 
   Future<void> _handleSignup() async {
     setState(() {
-      _firstError = _firstCtrl.text.trim().isEmpty ? 'First name is required' : null;
+      _firstError = _firstCtrl.text.trim().isEmpty
+          ? 'First name is required'
+          : null;
       _emailError = Validators.email(_emailCtrl.text);
       _passError = Validators.password(_passCtrl.text);
     });
@@ -53,7 +55,9 @@ class _SignupPageState extends State<SignupPage> {
     if (!_isFormValid()) {
       if (!_termsAccepted) {
         _showSnackbar(
-            'Please agree to the Terms of Service.', AppColors.warning);
+          'Please agree to the Terms of Service.',
+          AppColors.warning,
+        );
       }
       return;
     }
@@ -99,8 +103,9 @@ class _SignupPageState extends State<SignupPage> {
       if (credential == null) return;
       if (!mounted) return;
       _showSnackbar(
-          'Welcome, ${credential.user?.displayName ?? 'User'}! 🎮',
-          AppColors.success);
+        'Welcome, ${credential.user?.displayName ?? 'User'}! 🎮',
+        AppColors.success,
+      );
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -123,8 +128,7 @@ class _SignupPageState extends State<SignupPage> {
         content: Text(message, style: const TextStyle(color: Colors.white)),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         margin: const EdgeInsets.all(16),
       ),
     );
@@ -156,9 +160,10 @@ class _SignupPageState extends State<SignupPage> {
                         controller: _firstCtrl,
                         errorText: _firstError,
                         onChanged: (v) => setState(
-                            () => _firstError = v.trim().isEmpty
-                                ? 'Required'
-                                : null),
+                          () => _firstError = v.trim().isEmpty
+                              ? 'Required'
+                              : null,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -215,8 +220,7 @@ class _SignupPageState extends State<SignupPage> {
 
                 // Terms checkbox
                 GestureDetector(
-                  onTap: () =>
-                      setState(() => _termsAccepted = !_termsAccepted),
+                  onTap: () => setState(() => _termsAccepted = !_termsAccepted),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -238,8 +242,11 @@ class _SignupPageState extends State<SignupPage> {
                           ),
                         ),
                         child: _termsAccepted
-                            ? const Icon(Icons.check_rounded,
-                                size: 13, color: Colors.white)
+                            ? const Icon(
+                                Icons.check_rounded,
+                                size: 13,
+                                color: Colors.white,
+                              )
                             : null,
                       ),
                       const SizedBox(width: 10),
@@ -248,20 +255,24 @@ class _SignupPageState extends State<SignupPage> {
                           text: const TextSpan(
                             text: 'I agree to the ',
                             style: TextStyle(
-                                color: AppColors.muted, fontSize: 13),
+                              color: AppColors.muted,
+                              fontSize: 13,
+                            ),
                             children: [
                               TextSpan(
                                 text: 'Terms of Service',
                                 style: TextStyle(
-                                    color: AppColors.orange,
-                                    fontWeight: FontWeight.w700),
+                                  color: AppColors.orange,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                               TextSpan(text: ' and '),
                               TextSpan(
                                 text: 'Privacy Policy',
                                 style: TextStyle(
-                                    color: AppColors.orange,
-                                    fontWeight: FontWeight.w700),
+                                  color: AppColors.orange,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ],
                           ),
@@ -273,9 +284,10 @@ class _SignupPageState extends State<SignupPage> {
                 const SizedBox(height: 20),
 
                 PrimaryButton(
-                    label: 'Create Account',
-                    isLoading: _isLoading,
-                    onTap: _handleSignup),
+                  label: 'Create Account',
+                  isLoading: _isLoading,
+                  onTap: _handleSignup,
+                ),
                 const SizedBox(height: 20),
 
                 const OrDivider(),
