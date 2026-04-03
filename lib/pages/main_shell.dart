@@ -9,7 +9,7 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _currentIndex = 2; // Start on Market/Store tab
+  int _currentIndex = 0;
 
   final List<Widget> _pages = [
     const _PlaceholderPage(label: 'Home'),

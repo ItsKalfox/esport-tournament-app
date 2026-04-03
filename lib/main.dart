@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
 import 'firebase_options.dart';
-import 'providers/cart_provider.dart';
+
 import 'services/stripe_service.dart';
 import 'pages/main_shell.dart';
+
+import 'package:firebase_auth/firebase_auth.dart';
+import '.../../pages/signup/login.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,20 +20,69 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CartProvider(),
-      child: MaterialApp(
-        title: 'Esports App',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          scaffoldBackgroundColor: const Color(0xFF0D0D0D),
-          colorScheme: ColorScheme.dark(
-            primary: const Color(0xFFF0A500),
-            surface: const Color(0xFF161616),
-          ),
-          useMaterial3: true,
+    return MaterialApp(
+      title: 'Esport Tournament',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        scaffoldBackgroundColor: const Color(0xFF0F0F0F),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFFF8400),
+          surface: Color(0xFF181818),
         ),
-        home: const MainShell(),
+      ),
+      home: const _AuthGate(),
+    );
+  }
+}
+
+// ─── Auth Gate ────────────────────────────────────────────────────
+// Listens to Firebase auth state:
+//   - User already logged in  → goes straight to MainShell
+//   - User not logged in      → shows LoginPage
+//   - Loading                 → shows splash screen
+class _AuthGate extends StatelessWidget {
+  const _AuthGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Still checking auth state — show splash
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _SplashScreen();
+        }
+
+        // User is logged in — go to MainShell
+        if (snapshot.hasData && snapshot.data != null) {
+          return const MainShell();
+        }
+
+        // User is not logged in — show Login
+        return const LoginPage();
+      },
+    );
+  }
+}
+
+// ─── Splash Screen ────────────────────────────────────────────────
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      backgroundColor: Color(0xFF0F0F0F),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Replace with your app logo if you have one
+            Icon(Icons.sports_esports, color: Color(0xFFFF8400), size: 64),
+            SizedBox(height: 24),
+            CircularProgressIndicator(color: Color(0xFFFF8400), strokeWidth: 2),
+          ],
+        ),
       ),
     );
   }
