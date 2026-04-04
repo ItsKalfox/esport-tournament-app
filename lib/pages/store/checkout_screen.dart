@@ -21,7 +21,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _cityCtrl = TextEditingController();
   final _districtCtrl = TextEditingController();
 
-  String _paymentMethod = 'online'; // 'online' | 'cod'
+  String _paymentMethod = 'online';
   bool _processing = false;
 
   final _stripe = StripeService();
@@ -29,10 +29,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill email if user is logged in
+    // Pre-fill user details if logged in
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       _emailCtrl.text = user.email ?? '';
+      _nameCtrl.text = user.displayName ?? '';
+      _phoneCtrl.text = user.phoneNumber ?? '';
     }
   }
 
@@ -89,6 +91,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return orderRef.id;
   }
 
+  Future<void> _decrementStock(CartProvider cart) async {
+    final batch = FirebaseFirestore.instance.batch();
+    for (final item in cart.items) {
+      final productRef = FirebaseFirestore.instance
+          .collection('products')
+          .doc(item.product.id);
+      batch.update(productRef, {'stock': FieldValue.increment(-item.quantity)});
+    }
+    await batch.commit();
+  }
+
   Future<void> _placeOrder() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _processing = true);
@@ -108,7 +121,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         );
 
         if (result.isSuccess) {
-          // Update order status to processing
+          // Update order status
           await FirebaseFirestore.instance
               .collection('orders')
               .doc(orderId)
@@ -118,10 +131,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 'paidAt': FieldValue.serverTimestamp(),
               });
 
+          // Decrement stock after payment confirmed
+          await _decrementStock(cart);
+
           cart.clear();
           if (mounted) _showSuccess(orderId);
         } else if (result.isCancelled) {
-          // Delete the pending order if user cancelled
+          // Delete pending order if cancelled
           await FirebaseFirestore.instance
               .collection('orders')
               .doc(orderId)
@@ -136,7 +152,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             );
           }
         } else {
-          // Payment failed — delete pending order
+          // Delete pending order if failed
           await FirebaseFirestore.instance
               .collection('orders')
               .doc(orderId)
@@ -152,7 +168,8 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           }
         }
       } else {
-        // COD — order placed directly
+        // COD — decrement stock immediately since order is confirmed
+        await _decrementStock(cart);
         cart.clear();
         if (mounted) _showSuccess(orderId);
       }
