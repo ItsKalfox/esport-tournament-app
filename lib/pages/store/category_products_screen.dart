@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../../models/category_model.dart';
 import '../../models/product.dart';
 import '../../services/store_service.dart';
+import '../../providers/cart_provider.dart';
+import '../../widgets/wishlist_button.dart';
+import 'package:provider/provider.dart';
 import 'product_detail_screen.dart';
 
 class CategoryProductsScreen extends StatefulWidget {
@@ -425,10 +428,9 @@ class _ProductCard extends StatelessWidget {
                         ],
                       ),
                     ),
-                    // ← uses imageUrl (single string) from your model
-                    child: product.imageUrl.isNotEmpty
+                    child: product.primaryImage.isNotEmpty
                         ? Image.network(
-                            product.imageUrl,
+                            product.primaryImage,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => _placeholder(),
                           )
@@ -485,6 +487,12 @@ class _ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                // Wishlist button
+                Positioned(
+                  bottom: 7,
+                  right: 7,
+                  child: WishlistButton(product: product, size: 14),
+                ),
                 if (!product.inStock)
                   Positioned.fill(
                     child: ClipRRect(
@@ -563,6 +571,7 @@ class _ProductCard extends StatelessWidget {
                     GestureDetector(
                       onTap: product.inStock
                           ? () {
+                              context.read<CartProvider>().addItem(product);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(

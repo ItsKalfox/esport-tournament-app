@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/category_model.dart';
 import '../services/store_service.dart';
 import '../pages/store/category_products_screen.dart';
 import '../pages/store/order_tracking_screen.dart';
+import '../pages/store/wishlist_screen.dart';
+import '../pages/store/saved_addresses_screen.dart';
+import '../pages/store/payment_details_screen.dart';
 
 class StoreDrawer extends StatefulWidget {
   const StoreDrawer({super.key});
@@ -41,15 +45,13 @@ class _StoreDrawerState extends State<StoreDrawer>
     super.dispose();
   }
 
-  // Used when tapping backdrop — animate close
   Future<void> _close() async {
     await _controller.reverse();
     if (mounted) Navigator.of(context).pop();
   }
 
-  // Used when navigating to a screen — pop instantly, no animation flash
   void _closeAndNavigate(BuildContext context, Widget screen) {
-    Navigator.of(context).pop(); // pop drawer instantly
+    Navigator.of(context).pop();
     Navigator.of(context).push(MaterialPageRoute(builder: (_) => screen));
   }
 
@@ -122,19 +124,19 @@ class _DrawerContent extends StatelessWidget {
                       onTap: () => onNavigate(const OrderTrackingScreen()),
                     ),
                     _DrawerItem(
+                      icon: Icons.favorite_outline,
+                      label: 'Wishlist',
+                      onTap: () => onNavigate(const WishlistScreen()),
+                    ),
+                    _DrawerItem(
                       icon: Icons.payment_outlined,
                       label: 'Payment Details',
-                      onTap: onClose,
+                      onTap: () => onNavigate(const PaymentDetailsScreen()),
                     ),
                     _DrawerItem(
                       icon: Icons.location_on_outlined,
                       label: 'Saved Addresses',
-                      onTap: onClose,
-                    ),
-                    _DrawerItem(
-                      icon: Icons.favorite_outline,
-                      label: 'Wishlist',
-                      onTap: onClose,
+                      onTap: () => onNavigate(const SavedAddressesScreen()),
                     ),
                     const SizedBox(height: 8),
                     const Divider(color: Color(0xFF1E1E1E), height: 1),
@@ -174,49 +176,70 @@ class _DrawerHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final name = user?.displayName?.isNotEmpty == true
+        ? user!.displayName!
+        : 'Guest';
+    final email = user?.email ?? '';
+    final initials = name
+        .split(' ')
+        .take(2)
+        .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+        .join();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
       child: Row(
         children: [
+          // Avatar with initials
           Container(
-            width: 38,
-            height: 38,
+            width: 42,
+            height: 42,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: [Color(0xFFC8860A), Color(0xFFF0A500)],
               ),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
-                'GX',
-                style: TextStyle(
+                initials.isNotEmpty ? initials : 'G',
+                style: const TextStyle(
                   color: Colors.black,
                   fontWeight: FontWeight.w900,
-                  fontSize: 13,
+                  fontSize: 15,
                 ),
               ),
             ),
           ),
           const SizedBox(width: 12),
-          const Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Store Menu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              Text(
-                'Browse & manage your account',
-                style: TextStyle(color: Color(0xFF555555), fontSize: 11),
-              ),
-            ],
+                if (email.isNotEmpty)
+                  Text(
+                    email,
+                    style: const TextStyle(
+                      color: Color(0xFF555555),
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
           ),
-          const Spacer(),
           IconButton(
             onPressed: onClose,
             icon: const Icon(Icons.close, color: Color(0xFF555555), size: 20),
@@ -249,15 +272,6 @@ class _CategoriesSection extends StatelessWidget {
                   color: Color(0xFFF0A500),
                 ),
               ),
-            ),
-          );
-        }
-        if (snap.hasError) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-            child: Text(
-              'Failed to load categories',
-              style: TextStyle(color: Color(0xFF555555), fontSize: 12),
             ),
           );
         }

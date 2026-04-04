@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'providers/cart_provider.dart';
+import 'providers/wishlist_provider.dart';
 import 'services/stripe_service.dart';
 import 'pages/main_shell.dart';
 import 'pages/signup/login.dart';
@@ -20,8 +21,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => CartProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => WishlistProvider()),
+      ],
       child: MaterialApp(
         title: 'Esport Tournament',
         debugShowCheckedModeBanner: false,
@@ -40,10 +44,6 @@ class MyApp extends StatelessWidget {
 }
 
 // ─── Auth Gate ────────────────────────────────────────────────────────────────
-// Listens to Firebase auth state:
-//   - User already logged in  → goes straight to MainShell
-//   - User not logged in      → shows LoginPage
-//   - Loading                 → shows splash screen
 class _AuthGate extends StatelessWidget {
   const _AuthGate();
 
@@ -57,8 +57,9 @@ class _AuthGate extends StatelessWidget {
           return const _SplashScreen();
         }
 
-        // User is logged in — go to MainShell
+        // User is logged in — load wishlist and go to MainShell
         if (snapshot.hasData && snapshot.data != null) {
+          context.read<WishlistProvider>().loadWishlist();
           return const MainShell();
         }
 

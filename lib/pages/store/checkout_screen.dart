@@ -29,12 +29,45 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill user details if logged in
+    _prefillFromAuth();
+    _prefillDefaultAddress();
+  }
+
+  void _prefillFromAuth() {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      _emailCtrl.text = user.email ?? '';
       _nameCtrl.text = user.displayName ?? '';
+      _emailCtrl.text = user.email ?? '';
       _phoneCtrl.text = user.phoneNumber ?? '';
+    }
+  }
+
+  Future<void> _prefillDefaultAddress() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .collection('addresses')
+          .where('isDefault', isEqualTo: true)
+          .limit(1)
+          .get();
+      if (snap.docs.isEmpty) return;
+      final data = snap.docs.first.data();
+      if (mounted) {
+        setState(() {
+          if ((data['line1'] ?? '').isNotEmpty)
+            _addressCtrl.text = data['line1'];
+          if ((data['city'] ?? '').isNotEmpty) _cityCtrl.text = data['city'];
+          if ((data['district'] ?? '').isNotEmpty)
+            _districtCtrl.text = data['district'];
+          if ((data['phone'] ?? '').isNotEmpty && _phoneCtrl.text.isEmpty)
+            _phoneCtrl.text = data['phone'];
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading default address: $e');
     }
   }
 

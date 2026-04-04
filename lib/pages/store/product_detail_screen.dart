@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../models/product.dart';
 import '../../services/store_service.dart';
+import '../../widgets/wishlist_button.dart';
 import 'package:provider/provider.dart';
 import '../../providers/cart_provider.dart';
 
@@ -21,7 +22,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Pre-select first option of each variant
     for (final v in widget.product.variants) {
       final name = v['name']?.toString() ?? '';
       final options = v['options'];
@@ -71,10 +71,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       backgroundColor: const Color(0xFF0D0D0D),
       body: Stack(
         children: [
-          // ── Scrollable content ────────────────────────────────────────
           CustomScrollView(
             slivers: [
-              // ── Image gallery ───────────────────────────────────────
               SliverToBoxAdapter(
                 child: _ImageGallery(
                   images: images,
@@ -85,15 +83,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   product: product,
                 ),
               ),
-
-              // ── Product info ────────────────────────────────────────
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Sale tag
                       if (product.saleTag != null)
                         Container(
                           margin: const EdgeInsets.only(bottom: 8),
@@ -118,8 +113,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                             ),
                           ),
                         ),
-
-                      // Name
                       Text(
                         product.name,
                         style: const TextStyle(
@@ -130,8 +123,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
-
-                      // Price row
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.baseline,
                         textBaseline: TextBaseline.alphabetic,
@@ -182,12 +173,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ],
                       ),
                       const SizedBox(height: 12),
-
-                      // Stock indicator
                       _StockIndicator(product: product),
                       const SizedBox(height: 16),
-
-                      // Description
                       if (product.description.isNotEmpty) ...[
                         const _SectionTitle('Description'),
                         const SizedBox(height: 8),
@@ -201,8 +188,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                         const SizedBox(height: 20),
                       ],
-
-                      // Variants selector
                       if (product.variants.isNotEmpty) ...[
                         const _SectionTitle('Options'),
                         const SizedBox(height: 12),
@@ -222,8 +207,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         }),
                         const SizedBox(height: 20),
                       ],
-
-                      // Quantity selector
                       if (product.inStock) ...[
                         const _SectionTitle('Quantity'),
                         const SizedBox(height: 12),
@@ -234,22 +217,16 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         ),
                         const SizedBox(height: 20),
                       ],
-
-                      // Specifications
                       if (product.specifications.isNotEmpty) ...[
                         const _SectionTitle('Specifications'),
                         const SizedBox(height: 12),
                         _SpecsTable(specs: product.specifications),
                         const SizedBox(height: 20),
                       ],
-
-                      // Related products
                       _RelatedProducts(
                         categoryId: product.categoryId,
                         excludeId: product.id,
                       ),
-
-                      // Bottom padding for the sticky button
                       const SizedBox(height: 100),
                     ],
                   ),
@@ -257,8 +234,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ),
             ],
           ),
-
-          // ── Sticky Add to Cart button ────────────────────────────────
           Positioned(
             bottom: 0,
             left: 0,
@@ -303,7 +278,6 @@ class _ImageGallery extends StatelessWidget {
       height: 320,
       child: Stack(
         children: [
-          // Image pages
           images.isEmpty
               ? Container(
                   color: const Color(0xFF1A1200),
@@ -332,8 +306,7 @@ class _ImageGallery extends StatelessWidget {
                     ),
                   ),
                 ),
-
-          // Dark gradient at bottom
+          // Gradient
           Positioned(
             bottom: 0,
             left: 0,
@@ -349,7 +322,6 @@ class _ImageGallery extends StatelessWidget {
               ),
             ),
           ),
-
           // Back button
           Positioned(
             top: 48,
@@ -372,7 +344,12 @@ class _ImageGallery extends StatelessWidget {
               ),
             ),
           ),
-
+          // Wishlist button
+          Positioned(
+            top: 48,
+            right: 60,
+            child: WishlistButton(product: product),
+          ),
           // Dot indicators
           if (images.length > 1)
             Positioned(
@@ -398,7 +375,6 @@ class _ImageGallery extends StatelessWidget {
                 }),
               ),
             ),
-
           // Image count badge
           if (images.length > 1)
             Positioned(
@@ -440,7 +416,6 @@ class _StockIndicator extends StatelessWidget {
     Color color;
     String label;
     IconData icon;
-
     if (!product.inStock) {
       color = const Color(0xFFff4444);
       label = 'Out of Stock';
@@ -454,7 +429,6 @@ class _StockIndicator extends StatelessWidget {
       label = 'In Stock (${product.stock} available)';
       icon = Icons.check_circle_outline;
     }
-
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -678,7 +652,6 @@ class _SpecsTableState extends State<_SpecsTable> {
     final showSpecs = _expanded
         ? widget.specs
         : widget.specs.take(_previewCount).toList();
-
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF161616),
@@ -791,7 +764,6 @@ class _RelatedProducts extends StatelessWidget {
             .take(6)
             .toList();
         if (related.isEmpty) return const SizedBox.shrink();
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -926,7 +898,6 @@ class _AddToCartBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Total price
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -946,7 +917,6 @@ class _AddToCartBar extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 16),
-          // Add to cart button
           Expanded(
             child: GestureDetector(
               onTap: product.inStock ? onAddToCart : null,

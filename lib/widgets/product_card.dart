@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../widgets/wishlist_button.dart';
 
 class ProductCard extends StatelessWidget {
   final ProductModel product;
@@ -32,9 +33,9 @@ class ProductCard extends StatelessWidget {
                   child: SizedBox(
                     height: 104,
                     width: double.infinity,
-                    child: product.imageUrl.isNotEmpty
+                    child: product.primaryImage.isNotEmpty
                         ? Image.network(
-                            product.imageUrl,
+                            product.primaryImage,
                             fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) => _ProductPlaceholder(
                               category: product.categoryId,
@@ -95,6 +96,12 @@ class ProductCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                // Wishlist button
+                Positioned(
+                  bottom: 7,
+                  right: 7,
+                  child: WishlistButton(product: product, size: 14),
+                ),
                 // Out of stock overlay
                 if (!product.inStock)
                   Positioned.fill(

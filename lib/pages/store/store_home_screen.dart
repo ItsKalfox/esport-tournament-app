@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/store_banner.dart';
 import '../../models/product.dart';
 import '../../services/store_service.dart';
@@ -24,7 +25,6 @@ class StoreScreen extends StatelessWidget {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            // ── Top App Bar ──────────────────────────────────────────────────
             SliverToBoxAdapter(child: _TopBar()),
 
             // ── Hero Banner Carousel ─────────────────────────────────────────
@@ -200,6 +200,14 @@ class _TopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final name = user?.displayName ?? '';
+    final initials = name
+        .split(' ')
+        .take(2)
+        .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+        .join();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(6, 10, 6, 8),
       child: SizedBox(
@@ -217,33 +225,38 @@ class _TopBar extends StatelessWidget {
                 letterSpacing: 1,
               ),
             ),
-            // Left — logo
+
+            // Left — user avatar / initials
             Align(
               alignment: Alignment.centerLeft,
               child: Padding(
                 padding: const EdgeInsets.only(left: 10),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [Color(0xFFC8860A), Color(0xFFF0A500)],
+                child: GestureDetector(
+                  onTap: () => _openDrawer(context),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [Color(0xFFC8860A), Color(0xFFF0A500)],
+                      ),
                     ),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'GX',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13,
+                    child: Center(
+                      child: Text(
+                        initials.isNotEmpty ? initials : 'GX',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
             ),
+
             // Right — search + menu + cart
             Align(
               alignment: Alignment.centerRight,
@@ -269,7 +282,7 @@ class _TopBar extends StatelessWidget {
                       minHeight: 36,
                     ),
                   ),
-                  // Menu — opens side drawer
+                  // Menu
                   IconButton(
                     onPressed: () => _openDrawer(context),
                     icon: const Icon(Icons.menu, color: Colors.white, size: 22),
