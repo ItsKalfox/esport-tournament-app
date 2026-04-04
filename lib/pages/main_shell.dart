@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../pages/store/store_home_screen.dart';
+import '../services/auth_service.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -16,7 +18,7 @@ class _MainShellState extends State<MainShell> {
     const _PlaceholderPage(label: 'Events'),
     const StoreScreen(),
     const _PlaceholderPage(label: 'Profile'),
-    const _PlaceholderPage(label: 'Settings'),
+    const _TempSettingsPage(),
   ];
 
   @override
@@ -148,6 +150,70 @@ class _NavItem extends StatelessWidget {
               decoration: const BoxDecoration(
                 color: Color(0xFFF0A500),
                 shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Temp Settings Page ───────────────────────────────────────────────────────
+// Temporary — replace with real Settings screen when ready
+
+class _TempSettingsPage extends StatelessWidget {
+  const _TempSettingsPage();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D0D0D),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.construction, color: Color(0xFF333333), size: 48),
+            const SizedBox(height: 12),
+            const Text(
+              'Settings — Coming Soon',
+              style: TextStyle(color: Color(0xFF555555), fontSize: 14),
+            ),
+            if (user != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                user.email ?? '',
+                style: const TextStyle(color: Color(0xFF444444), fontSize: 12),
+              ),
+            ],
+            const SizedBox(height: 32),
+            GestureDetector(
+              onTap: () async => await AuthService.signOut(),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  border: Border.all(color: const Color(0xFFff4444)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.logout, color: Color(0xFFff4444), size: 18),
+                    SizedBox(width: 8),
+                    Text(
+                      'Sign Out',
+                      style: TextStyle(
+                        color: Color(0xFFff4444),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

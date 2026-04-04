@@ -70,6 +70,7 @@ class _SignupPageState extends State<SignupPage> {
         password: _passCtrl.text,
         firstName: _firstCtrl.text.trim(),
         lastName: _lastCtrl.text.trim(),
+        phone: _phoneCtrl.text.trim(), // ← pass phone number
       );
 
       if (!mounted) return;
@@ -150,7 +151,6 @@ class _SignupPageState extends State<SignupPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // First & Last name
                 Row(
                   children: [
                     Expanded(
@@ -197,7 +197,6 @@ class _SignupPageState extends State<SignupPage> {
                 ),
                 const SizedBox(height: 16),
 
-                // Password with live rules
                 AuthTextField(
                   label: 'Password',
                   hint: 'At least 8 characters',
@@ -212,13 +211,11 @@ class _SignupPageState extends State<SignupPage> {
                   },
                 ),
 
-                // Live password rules
                 if (_showPasswordRules)
                   PasswordRulesWidget(password: _passCtrl.text),
 
                 const SizedBox(height: 16),
 
-                // Terms checkbox
                 GestureDetector(
                   onTap: () => setState(() => _termsAccepted = !_termsAccepted),
                   child: Row(

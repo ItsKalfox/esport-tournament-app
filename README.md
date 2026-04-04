@@ -23,17 +23,19 @@ The system aims to create a **community-driven esports ecosystem** where players
 - View community posts from other gamers
 
 ## Gaming Marketplace
-- Buy gaming equipment
-- PC components
-- Consoles
-- Gaming accessories
+- Buy gaming equipment — PC components, consoles, accessories
 - Stripe payment integration (card payments)
-- Order tracking with status timeline
+- Order tracking with animated status timeline
+- Wishlist to save favourite products
+- Saved delivery addresses for faster checkout
+- Cart with quantity controls and free delivery threshold
 
 ## User System
-- User authentication
+- Email & password authentication
+- Google Sign-In
 - Player profiles
 - Team management
+- Role-based access (user / admin)
 
 ---
 
@@ -44,15 +46,11 @@ The system aims to create a **community-driven esports ecosystem** where players
 - React (Web Admin Panel)
 
 ### Backend
-- Firebase (Firestore, Auth)
-- Express.js (Payments & Image Uploads)
-- Stripe (Payment Gateway)
-
-### Services Used
-- Firebase Authentication
-- Cloud Firestore
-- Express.js local server (replaces Firebase Storage)
-- Stripe API
+- Firebase Firestore (database)
+- Firebase Auth (authentication)
+- Firebase Storage (images)
+- Firebase Cloud Functions (Stripe payments)
+- Stripe (payment gateway)
 
 ---
 
@@ -65,17 +63,16 @@ esport-tournament-app/
  │    ├── firebase_options.dart
  │    ├── pages/
  │    │    ├── main_shell.dart
+ │    │    ├── auth/
+ │    │    ├── signup/
  │    │    └── store/
  │    ├── models/
  │    ├── services/
  │    ├── providers/
  │    └── widgets/
- ├── server/                  ← Express backend
- │    ├── server.js
- │    ├── package.json
- │    ├── .env                ← create this (see below)
- │    ├── .env.example
- │    └── uploads/            ← images stored here
+ ├── functions/               ← Firebase Cloud Functions (Stripe)
+ │    ├── index.js
+ │    └── package.json
  └── admin-panel/             ← React web admin panel
       ├── src/
       └── package.json
@@ -90,8 +87,9 @@ Before running the project, install the following:
 - Flutter SDK
 - Dart SDK
 - Android Studio or VS Code
-- Node.js (v18 or higher)
+- Node.js (v20 or higher)
 - FlutterFire CLI
+- Firebase CLI
 
 ---
 
@@ -103,11 +101,12 @@ Flutter 3.41.0
 Dart 3.11.0
 ```
 
-### Firebase
+### Firebase (Flutter)
 ```
 firebase_core: ^4.5.0
 cloud_firestore: ^6.1.3
 firebase_auth: ^6.2.0
+firebase_storage: ^13.1.0
 ```
 
 ### FlutterFire CLI
@@ -126,19 +125,17 @@ firebase-tools: ^15.9.0
 
 This project uses **FlutterFire CLI** for Firebase configuration.
 
-Firebase has already been configured using:
-
-```
-flutterfire configure
-```
-
-This command generates the file:
+Firebase has already been configured. The config file is already in the repo:
 
 ```
 lib/firebase_options.dart
 ```
 
-which connects the application to Firebase automatically.
+If you need to reconfigure (e.g. new Firebase project), run:
+
+```bash
+flutterfire configure
+```
 
 ---
 
@@ -161,80 +158,36 @@ flutter pub get
 
 ---
 
-## 3. Set up and run the Express server
+## 3. Add your SHA-1 fingerprint to Firebase (required for Google Sign-In)
 
-The Express server handles **Stripe payments** and **image uploads/serving**.  
-Every team member who runs the app needs to run this server locally.
+Every team member must add their own machine's SHA-1 fingerprint to Firebase for Google Sign-In to work.
 
-### Step 1 — Install server dependencies
+**Step 1 — Get your SHA-1:**
 
+Windows:
 ```bash
-cd server
-npm install
+keytool -list -v -keystore "C:\Users\YOUR_USERNAME\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
 ```
 
-### Step 2 — Create your `.env` file
-
-Copy the example file:
-
+Mac:
 ```bash
-cp .env.example .env
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
 ```
 
-Open `.env` and fill in your values:
+Look for the `SHA1:` line in the output.
 
-```
-STRIPE_SECRET_KEY=sk_test_YOUR_STRIPE_SECRET_KEY
-BASE_URL=http://YOUR_PC_IP:3000
-PORT=3000
-```
+**Step 2 — Add to Firebase:**
+- Go to [Firebase Console](https://console.firebase.google.com) → `esport-tournament-app-3266f`
+- Project Settings (gear icon) → Your Apps → Android app
+- Click **Add fingerprint** → paste your SHA-1 → Save
+- Download the updated `google-services.json` and replace `android/app/google-services.json`
 
-> **How to find your PC's IP address:**
-> - **Windows:** Open Command Prompt → run `ipconfig` → look for **IPv4 Address** under your WiFi adapter (e.g. `192.168.1.5`)
-> - **Mac:** Open Terminal → run `ifconfig` → look for `inet` under `en0`
-
-> ⚠️ `BASE_URL` must use your actual PC IP, not `localhost`.  
-> This is because images uploaded from the admin panel are accessed by the Flutter app on a real device, which cannot reach `localhost`.
-
-### Step 3 — Start the server
-
-```bash
-npm run dev
-```
-
-You should see:
-
-```
-🚀 Esports Store Server running at http://localhost:3000
-📁 Images served from: http://localhost:3000/images/
-💳 Stripe: ✅ configured
-```
-
-> Keep this terminal running while using the app or admin panel.
+> ⚠️ Without this step, Google Sign-In will fail with "Google sign-in failed" error.  
+> Email/password login works without SHA-1.
 
 ---
 
-## 4. Update your IP in the Flutter app
-
-Open `lib/models/product.dart` and update the IP in the `_fixUrl` method:
-
-```dart
-static String _fixUrl(String url) {
-  return url.replaceAll('localhost', '192.168.X.X'); // ← your PC's IP
-}
-```
-
-Open `lib/services/stripe_service.dart` and update `_serverUrl`:
-
-```dart
-static const String _serverUrl = 'http://192.168.X.X:3000'; // ← your PC's IP
-```
-
-> ⚠️ Make sure your phone and PC are on the **same WiFi network**.
-
----
-
-## 5. Run the Flutter app
+## 4. Run the Flutter app
 
 Connect a device or start an emulator, then run:
 
@@ -244,7 +197,7 @@ flutter run
 
 ---
 
-## 6. Run the Admin Panel (optional)
+## 5. Run the Admin Panel (optional)
 
 The web admin panel is used to manage products, categories, banners and orders.
 
@@ -262,21 +215,24 @@ Opens at `http://localhost:3000` — log in with your Firebase admin account.
 
 # Admin Panel Setup
 
-To access the admin panel you need to:
+To access the admin panel, set up an admin account:
 
-**1. Create a user in Firebase Auth:**
-- Go to [Firebase Console](https://console.firebase.google.com) → `esport-tournament-app-3266f`
-- Authentication → Users → Add User
-- Enter email and password → copy the generated **UID**
+**1. Register normally in the app** — this creates a user in Firebase Auth and a document in Firestore `users/{uid}` with `role: "user"`.
 
-**2. Create an admin document in Firestore:**
-- Firestore → Create collection `users`
-- Document ID = the **UID** from step 1
-- Add field: `role` → `string` → `admin`
+**2. Upgrade to admin in Firestore:**
+- Go to [Firebase Console](https://console.firebase.google.com) → Firestore → `users` collection
+- Find the document for your user (by UID or email)
+- Change the `role` field from `"user"` to `"admin"`
 
 ---
 
-# Stripe Test Cards
+# Stripe Payments
+
+Stripe payments are handled by **Firebase Cloud Functions** — no local server needed.
+
+The Cloud Function is already deployed. It handles creating payment intents securely on the server side.
+
+### Test Cards
 
 The app uses Stripe in **test mode**. No real money is charged.
 
@@ -340,13 +296,8 @@ The app uses Stripe in **test mode**. No real money is charged.
 
 # Notes for Team Members
 
-- Always run the Express server (`npm run dev` in `server/`) before testing the store or admin panel
-- Update your PC's IP in `product.dart` and `stripe_service.dart` whenever your IP changes
-- The `server/uploads/` folder stores all product and banner images locally — do not delete it
-- The `.env` file has been committed to the repository **for development purposes only** — the Stripe keys inside are test keys and no real money is involved. Before going live, `.env` must be removed from Git tracking to protect production secrets:
-
-```bash
-echo "server/.env" >> .gitignore
-git rm --cached server/.env
-git commit -m "remove .env from tracking before production"
-```
+- **No local server needed** — images are on Firebase Storage, payments go through Firebase Cloud Functions
+- **Google Sign-In requires SHA-1** — each team member must add their debug SHA-1 to Firebase (see step 3 above)
+- **Admin panel image uploads** go directly to Firebase Storage — no IP addresses to configure
+- **User data** is saved to Firestore `users/{uid}` on registration with `role: "user"` — upgrade to `"admin"` manually for admin panel access
+- The `.env` file in `server/` is kept for reference only — the app no longer uses the Express server
