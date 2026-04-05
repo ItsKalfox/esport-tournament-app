@@ -104,11 +104,13 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   }
 
   Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _date,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: _date.isBefore(today) ? today : _date,
+      firstDate: today,                                       // no past dates
+      lastDate: today.add(const Duration(days: 365)),
       builder: (context, child) => Theme(
         data: ThemeData.dark().copyWith(
           colorScheme: const ColorScheme.dark(
@@ -119,7 +121,11 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         child: child!,
       ),
     );
-    if (picked != null) setState(() => _date = picked);
+    if (picked != null) {
+      setState(() => _date = picked);
+      // If the newly picked date is today, validate that current time is still valid
+      _validateDateTimeNotInPast();
+    }
   }
 
   Future<void> _pickTime() async {
@@ -139,8 +145,47 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       ),
     );
     if (picked != null) {
+      final now = DateTime.now();
+      final selected = DateTime(
+          _date.year, _date.month, _date.day, picked.hour, picked.minute);
+
+      if (selected.isBefore(now)) {
+        // Show error and don't apply the picked time
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Cannot set a time in the past. Please pick a future time.'),
+            backgroundColor: Color(0xFF8C2000),
+            behavior: SnackBarBehavior.floating,
+          ));
+        }
+        return; // reject the pick
+      }
+
       setState(() => _time =
           '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}');
+    }
+  }
+
+  /// Checks whether the current _date + _time combo is in the past.
+  /// Called after date changes to auto-correct stale times.
+  void _validateDateTimeNotInPast() {
+    final now = DateTime.now();
+    final parts = _time.split(':');
+    final current = DateTime(
+        _date.year, _date.month, _date.day,
+        int.parse(parts[0]), int.parse(parts[1]));
+    if (current.isBefore(now)) {
+      // Bump time to now + 1 hour, capped within same day
+      final bumped = now.add(const Duration(hours: 1));
+      setState(() => _time =
+          '${bumped.hour.toString().padLeft(2, '0')}:${bumped.minute.toString().padLeft(2, '0')}');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Time was in the past — updated to next valid time.'),
+          backgroundColor: Color(0xFF333333),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
     }
   }
 
@@ -167,6 +212,20 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   }
 
   Future<void> _createTournament() async {
+    // Final guard: reject if date+time is in the past
+    final parts = _time.split(':');
+    final tournamentDateTime = DateTime(
+        _date.year, _date.month, _date.day,
+        int.parse(parts[0]), int.parse(parts[1]));
+    if (tournamentDateTime.isBefore(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Tournament date and time must be in the future.'),
+        backgroundColor: Color(0xFF8C2000),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+
     setState(() => _loading = true);
     try {
       final user = FirebaseAuth.instance.currentUser!;
