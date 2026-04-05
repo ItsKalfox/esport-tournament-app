@@ -1,5 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:http/http.dart' as http;
 
 const kAccent = Color(0xFFFF8A00);
 const kCardBg = Color(0xFF1A1A1A);
@@ -22,10 +23,13 @@ class _AIChatScreenState extends State<AIChatScreen> {
   @override
   void initState() {
     super.initState();
-    _messages.add(ChatMessage(
-      content: "Hello! I'm your Esports AI Assistant. Ask me about tournaments, teams, strategies, or any gaming-related questions!",
-      isUser: false,
-    ));
+    _messages.add(
+      ChatMessage(
+        content:
+            "Hello! I'm your Esports AI Assistant. Ask me about tournaments, teams, strategies, or any gaming-related questions!",
+        isUser: false,
+      ),
+    );
   }
 
   Future<void> _sendMessage() async {
@@ -39,13 +43,24 @@ class _AIChatScreenState extends State<AIChatScreen> {
     _controller.clear();
 
     try {
-      final functions = FirebaseFunctions.instance;
-      final result = await functions
-          .httpsCallable('groqChat')
-          .call({'message': userInput});
+      final url = Uri.parse(
+        'https://groqchat-lskwx2g3ua-uc.a.run.app',
+      );
+      final resp = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'message': userInput}),
+      );
 
-      final response = result.data['response'] as String? ?? 'Sorry, I could not process your request.';
-      
+      if (resp.statusCode < 200 || resp.statusCode >= 300) {
+        throw Exception('Server error: ${resp.statusCode} ${resp.body}');
+      }
+
+      final data = jsonDecode(resp.body);
+      final response =
+          data['response'] as String? ??
+          'Sorry, I could not process your request.';
+
       if (!mounted) return;
       setState(() {
         _messages.add(ChatMessage(content: response, isUser: false));
@@ -55,10 +70,12 @@ class _AIChatScreenState extends State<AIChatScreen> {
       if (!mounted) return;
       final errorMessage = e.toString();
       setState(() {
-        _messages.add(ChatMessage(
-          content: "Connection error: $errorMessage",
-          isUser: false,
-        ));
+        _messages.add(
+          ChatMessage(
+            content: "Connection error: $errorMessage",
+            isUser: false,
+          ),
+        );
         _isLoading = false;
       });
     }
@@ -120,10 +137,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                     ),
                   ),
                   SizedBox(width: 12),
-                  Text(
-                    'Thinking...',
-                    style: TextStyle(color: kTextSecondary),
-                  ),
+                  Text('Thinking...', style: TextStyle(color: kTextSecondary)),
                 ],
               ),
             ),

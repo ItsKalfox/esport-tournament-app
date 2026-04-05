@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 class StripeService {
   static const String _publishableKey =
-      'pk_test_51TFI36FovDiZH4SL5c7kkzysskCQLqjEazH7bqDHFlegKvRXGePz5GXq1vcO9V82ZCCQzo25zJXmORaRdrvJK85p00QPgonLDm';
+      'pk_test_51TCDnp7lC3WAYGa8JemAIbhkFSMj3jf6QvG2G90LkSqeozeRFIDFtLFEjQ9MiBHQEULCo0t7cHrvnrqlVRpvI5jC00VXzlrmHH';
 
   // Firebase Cloud Function URL
   // Format: https://REGION-PROJECT_ID.cloudfunctions.net/FUNCTION_NAME
