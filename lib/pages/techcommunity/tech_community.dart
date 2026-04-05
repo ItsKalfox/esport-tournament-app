@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class Post {
   final String id;
@@ -72,94 +73,69 @@ class _TechCommunityScreenState extends State<TechCommunityScreen> {
     return Scaffold(
       backgroundColor: bg,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.brown[700],
-                      shape: BoxShape.circle,
-                      border: Border.all(color: accent, width: 2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'TECH COMMUNITY',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ),
-                ],
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(child: _TopBar()),
+            SliverToBoxAdapter(
+              child: Divider(
+                color: accent.withOpacity(0.9),
+                thickness: 3,
+                indent: 12,
+                endIndent: 12,
               ),
             ),
-            Divider(
-              color: accent.withOpacity(0.9),
-              thickness: 3,
-              indent: 12,
-              endIndent: 12,
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: accent,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 14,
-                    horizontal: 18,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Create post tapped')),
-                  );
-                },
-                icon: const Icon(Icons.edit, color: Colors.white),
-                label: const Text(
-                  'CREATE POST',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
-            ),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                'Tech Feed',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: ListView.builder(
+            SliverToBoxAdapter(
+              child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
+                  horizontal: 16,
+                  vertical: 12,
                 ),
-                itemCount: posts.length,
-                itemBuilder: (context, index) {
-                  return _buildPostCard(context, index);
-                },
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: accent,
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 18,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Create post tapped')),
+                    );
+                  },
+                  icon: const Icon(Icons.edit, color: Colors.white),
+                  label: const Text(
+                    'CREATE POST',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ),
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text(
+                  'Tech Feed',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(child: const SizedBox(height: 12)),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildPostCard(context, index),
+                childCount: posts.length,
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomBar(context),
     );
   }
 
@@ -270,44 +246,82 @@ class _TechCommunityScreenState extends State<TechCommunityScreen> {
       child: Icon(icon, color: Colors.white, size: 18),
     );
   }
+}
 
-  Widget _buildBottomBar(BuildContext context) {
-    return BottomAppBar(
-      color: const Color(0xFF0F0F0F),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+class _TopBar extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final name = user?.displayName ?? '';
+    final initials = name
+        .split(' ')
+        .take(2)
+        .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+        .join();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(6, 10, 6, 8),
+      child: SizedBox(
+        height: 46,
+        child: Stack(
+          alignment: Alignment.center,
           children: [
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.grid_view, color: Colors.white),
-            ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.emoji_events_outlined,
+            const Text(
+              'Tech Community',
+              style: TextStyle(
                 color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1,
               ),
             ),
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: accent,
-                borderRadius: BorderRadius.circular(8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 10),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFC8860A), Color(0xFFF0A500)],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      initials.isNotEmpty ? initials : 'GX',
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              child: const Icon(Icons.person, color: Colors.white),
             ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(
-                Icons.shopping_bag_outlined,
-                color: Colors.white,
+            Align(
+              alignment: Alignment.centerRight,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(
+                      Icons.search,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 36,
+                      minHeight: 36,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ],
               ),
-            ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.person_outline, color: Colors.white),
             ),
           ],
         ),
