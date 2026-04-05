@@ -12,9 +12,123 @@ class TournamentService {
   CollectionReference get _tournaments => _db.collection('tournaments');
   CollectionReference get _matchResults => _db.collection('matchResults');
   CollectionReference get _teamInvites => _db.collection('teamInvites');
+  CollectionReference get _globalTeams => _db.collection('teams'); // persistent teams
 
-  CollectionReference _teams(String tournamentId) =>
+  CollectionReference _tournamentTeams(String tournamentId) =>
       _tournaments.doc(tournamentId).collection('teams');
+
+  // Keep backward compat alias used by existing code
+  CollectionReference _teams(String tournamentId) =>
+      _tournamentTeams(tournamentId);
+
+  // ════════════════════════════════════════════════════════════════════════════
+  // GLOBAL TEAMS
+  // ════════════════════════════════════════════════════════════════════════════
+
+  /// Create a new persistent team. Returns the new team's Firestore ID.
+  Future<String> createGlobalTeam(TeamModel team) async {
+    final user = _auth.currentUser!;
+    final ref = await _globalTeams.add(team.toMap());
+    // Send invites for any pending emails
+    for (final email in team.pendingEmails) {
+      await _teamInvites.add({
+        'tournamentId': '',
+        'teamId': ref.id,
+        'teamName': team.name,
+        'teamLogoEmoji': team.logoEmoji,
+        'inviterUid': user.uid,
+        'inviterName': user.displayName ?? 'Captain',
+        'inviteeEmail': email.toLowerCase().trim(),
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+    return ref.id;
+  }
+
+  /// Stream all global teams where the current user is captain or member.
+  Stream<List<TeamModel>> getUserGlobalTeams(String uid) {
+    // Captain teams
+    final captainStream = _globalTeams
+        .where('captainUid', isEqualTo: uid)
+        .snapshots()
+        .map((s) => s.docs.map((d) => TeamModel.fromDoc(d)).toList());
+    return captainStream; // member-based query requires separate merge; captain is main use case
+  }
+
+  /// Stream all global teams the user is member of (captain OR member).
+  Stream<List<TeamModel>> getAllUserTeams(String uid) {
+    return _globalTeams
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snap) {
+      return snap.docs
+          .map((d) => TeamModel.fromDoc(d))
+          .where((team) =>
+              team.captainUid == uid ||
+              team.members.any((m) => m.uid == uid))
+          .toList();
+    });
+  }
+
+  /// Stream a single global team by ID.
+  Stream<TeamModel?> getGlobalTeamStream(String teamId) {
+    return _globalTeams
+        .doc(teamId)
+        .snapshots()
+        .map((d) => d.exists ? TeamModel.fromDoc(d) : null);
+  }
+
+  /// Update team name and/or logo emoji.
+  Future<void> updateGlobalTeamInfo(
+      String teamId, String name, String logoEmoji) async {
+    await _globalTeams.doc(teamId).update({
+      'name': name,
+      'logoEmoji': logoEmoji,
+    });
+  }
+
+  /// Set team logo URL (after image upload).
+  Future<void> updateGlobalTeamLogoUrl(String teamId, String url) async {
+    await _globalTeams.doc(teamId).update({'logoUrl': url});
+  }
+
+  /// Remove a member from a global team (captain-only action).
+  Future<void> removeTeamMember(String teamId, TeamMember member) async {
+    await _globalTeams.doc(teamId).update({
+      'members': FieldValue.arrayRemove([member.toMap()]),
+    });
+  }
+
+  /// Register a global team into a tournament (copy team snapshot).
+  Future<String> registerTeamForTournament({
+    required TeamModel globalTeam,
+    required String tournamentId,
+  }) async {
+    // Check already registered
+    final existing = await _tournamentTeams(tournamentId)
+        .where('captainUid', isEqualTo: globalTeam.captainUid)
+        .limit(1)
+        .get();
+    if (existing.docs.isNotEmpty) {
+      throw Exception('You already have a team registered in this tournament');
+    }
+    final snapshot = globalTeam.toMap()
+      ..['tournamentId'] = tournamentId
+      ..['advancedToFinals'] = false
+      ..['registeredFrom'] = globalTeam.id; // track origin
+    final ref = await _tournamentTeams(tournamentId).add(snapshot);
+    await _tournaments.doc(tournamentId).update({
+      'registeredTeams': FieldValue.increment(1),
+    });
+    return ref.id;
+  }
+
+  /// Update global team logo URL — for TournamentService backward compat.
+  Future<void> updateTeamLogoUrl(
+      String tournamentId, String teamId, String url) async {
+    await _teams(tournamentId).doc(teamId).update({'logoUrl': url});
+  }
 
   // ── Create Tournament ─────────────────────────────────────────────────────
   Future<String> createTournament(TournamentModel tournament) async {
@@ -27,11 +141,7 @@ class TournamentService {
     await _tournaments.doc(tournamentId).update({'posterUrl': url});
   }
 
-  // ── Set team logo URL after upload ────────────────────────────────────────
-  Future<void> updateTeamLogoUrl(
-      String tournamentId, String teamId, String url) async {
-    await _teams(tournamentId).doc(teamId).update({'logoUrl': url});
-  }
+
 
   // ── Stream All Tournaments ────────────────────────────────────────────────
   Stream<List<TournamentModel>> getTournaments() {
@@ -164,14 +274,27 @@ class TournamentService {
   Stream<List<Map<String, dynamic>>> getPendingInvites() {
     final email =
         _auth.currentUser?.email?.toLowerCase().trim() ?? '';
+    // NOTE: Using only one where() + one where() without orderBy to avoid
+    // requiring a Firestore composite index. Sort is done client-side.
     return _teamInvites
         .where('inviteeEmail', isEqualTo: email)
         .where('status', isEqualTo: 'pending')
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs
-            .map((d) => {'id': d.id, ...d.data() as Map<String, dynamic>})
-            .toList());
+        .map((snap) {
+          final docs = snap.docs
+              .map((d) => {'id': d.id, ...d.data() as Map<String, dynamic>})
+              .toList();
+          // Sort newest first client-side
+          docs.sort((a, b) {
+            final aTs = a['createdAt'];
+            final bTs = b['createdAt'];
+            if (aTs == null && bTs == null) return 0;
+            if (aTs == null) return 1;
+            if (bTs == null) return -1;
+            return (bTs as dynamic).compareTo(aTs as dynamic);
+          });
+          return docs;
+        });
   }
 
   // Count of pending invites (for badge)
@@ -191,7 +314,11 @@ class TournamentService {
 
     await _db.runTransaction((tx) async {
       final inviteRef = _teamInvites.doc(inviteId);
-      final teamRef = _teams(tournamentId).doc(teamId);
+      // Global-team invite has empty tournamentId — write to root teams/ collection.
+      // Tournament invite writes to the tournament's teams sub-collection.
+      final teamRef = tournamentId.isEmpty
+          ? _globalTeams.doc(teamId)
+          : _teams(tournamentId).doc(teamId);
 
       tx.update(inviteRef, {'status': 'accepted'});
       tx.update(teamRef, {

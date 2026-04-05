@@ -1,16 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:image_cropper/image_cropper.dart';
 import '../../models/tournament_model.dart';
 import '../../models/team_model.dart';
 import '../../services/tournament_service.dart';
-import '../../services/image_upload_service.dart';
-
-const List<String> _kEmojis = [
-  '🎮', '⚔️', '🔥', '🏆', '👾', '💀', '🐉', '🦅', '⚡', '🌪️',
-  '🎯', '🛡️', '🚀', '🐺', '🦁', '💎', '🔱', '☠️', '🦊', '🐯',
-];
+import 'create_team_screen.dart';
 
 class JoinTournamentScreen extends StatefulWidget {
   final TournamentModel tournament;
@@ -20,687 +13,394 @@ class JoinTournamentScreen extends StatefulWidget {
   State<JoinTournamentScreen> createState() => _JoinTournamentScreenState();
 }
 
-class _JoinTournamentScreenState extends State<JoinTournamentScreen>
-    with SingleTickerProviderStateMixin {
+class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
   final _service = TournamentService();
-  final _teamNameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
-  String _selectedEmoji = '🎮';
-  File? _logoFile;         // locally picked team logo
-  double _uploadProgress = 0;
-  final List<String> _pendingEmails = [];
-  bool _loading = false;
+  String? _selectedTeamId;
+  bool _joining = false;
 
-  // Tab controller for emoji vs image
-  late final TabController _logoTabCtrl;
+  String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
+  int get _required => widget.tournament.playersPerTeam;
 
-  @override
-  void initState() {
-    super.initState();
-    _logoTabCtrl = TabController(length: 2, vsync: this);
-    _logoTabCtrl.addListener(() => setState(() {}));
-  }
-
-  @override
-  void dispose() {
-    _teamNameCtrl.dispose();
-    _emailCtrl.dispose();
-    _logoTabCtrl.dispose();
-    super.dispose();
-  }
-
-  // ─── Pick team logo image ──────────────────────────────────────────────────
-
-  Future<void> _pickLogoImage() async {
-    final file = await ImageUploadService.showPickerSheet(
-      context: context,
-      cropStyle: CropStyle.circle,
-      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
-      maxBytes: kMaxLogoSizeBytes,
-      toolbarTitle: 'Crop Team Logo',
-    );
-    if (file != null) setState(() => _logoFile = file);
-  }
-
-  // ─── Email helpers ─────────────────────────────────────────────────────────
-
-  void _addEmail() {
-    final email = _emailCtrl.text.trim().toLowerCase();
-    if (email.isEmpty) return;
-    if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email)) {
-      _showSnack('Please enter a valid email address');
-      return;
-    }
-    if (_pendingEmails.contains(email)) {
-      _showSnack('Email already added');
-      return;
-    }
-    if (_pendingEmails.length >= 3) {
-      _showSnack('Max 3 teammates (4 players per team)');
-      return;
-    }
-    final currentEmail =
-        FirebaseAuth.instance.currentUser?.email?.toLowerCase();
-    if (email == currentEmail) {
-      _showSnack("You can't invite yourself");
-      return;
-    }
-    setState(() {
-      _pendingEmails.add(email);
-      _emailCtrl.clear();
-    });
-  }
-
-  // ─── Join / Create team ────────────────────────────────────────────────────
-
-  Future<void> _joinTournament() async {
-    if (_teamNameCtrl.text.trim().isEmpty) {
-      _showSnack('Please enter a team name');
-      return;
-    }
-    // If user is on image tab but picked no image, warn
-    if (_logoTabCtrl.index == 1 && _logoFile == null) {
-      _showSnack('Please pick a team logo image, or switch to emoji');
-      return;
-    }
-    setState(() => _loading = true);
+  Future<void> _join(TeamModel team) async {
+    setState(() => _joining = true);
     try {
-      final user = FirebaseAuth.instance.currentUser!;
-      final captain = TeamMember(
-        uid: user.uid,
-        displayName: user.displayName ?? 'Captain',
-        email: user.email ?? '',
-      );
-      final team = TeamModel(
-        id: '',
+      await _service.registerTeamForTournament(
+        globalTeam: team,
         tournamentId: widget.tournament.id,
-        name: _teamNameCtrl.text.trim(),
-        logoEmoji: _selectedEmoji,
-        captainUid: user.uid,
-        captainName: user.displayName ?? 'Captain',
-        members: [captain],
-        pendingEmails: _pendingEmails,
-        advancedToFinals: false,
-        createdAt: DateTime.now(),
       );
-      final teamId = await _service.createTeam(team);
-
-      // Upload logo if user picked an image
-      if (_logoTabCtrl.index == 1 && _logoFile != null) {
-        setState(() => _uploadProgress = 0.01);
-        final url = await ImageUploadService.uploadImage(
-          file: _logoFile!,
-          storagePath:
-              'team_logos/${widget.tournament.id}_${DateTime.now().millisecondsSinceEpoch}.jpg',
-          onProgress: (p) {
-            if (mounted) setState(() => _uploadProgress = p);
-          },
-        );
-        await _service.updateTeamLogoUrl(widget.tournament.id, teamId, url);
-      }
-
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Team created! Invites sent to teammates 🎮'),
-            backgroundColor: Color(0xFF2A8C00),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Team registered! Good luck! 🏆'),
+          backgroundColor: Color(0xFF2A8C00),
+          behavior: SnackBarBehavior.floating,
+        ));
       }
     } catch (e) {
-      _showSnack('Error: $e');
-      setState(() => _loading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e.toString().replaceAll('Exception: ', '')),
+          backgroundColor: const Color(0xFF8C0000),
+          behavior: SnackBarBehavior.floating,
+        ));
+        setState(() => _joining = false);
+      }
     }
   }
-
-  void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: const Color(0xFF333333),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  // ─── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0D0D0D),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios,
-                        color: Colors.white, size: 20),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Create Your Team',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+      body: SafeArea(child: Column(children: [
+        // ── Header ───────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(8, 12, 16, 0),
+          child: Row(children: [
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
             ),
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.only(left: 20, bottom: 4),
-              child: Text(
-                widget.tournament.name,
-                style:
-                    const TextStyle(color: Color(0xFFF0A500), fontSize: 12),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Team Name ────────────────────────────────────────────
-                    const _Label('Team Name *'),
-                    _DarkInput(
-                      controller: _teamNameCtrl,
-                      hint: 'Enter your team name',
-                      onChanged: (_) => setState(() {}),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── Logo Section with Tab ────────────────────────────────
-                    const _Label('Team Logo'),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Choose an emoji icon or upload a custom image (max 2 MB, square).',
-                      style: TextStyle(color: Color(0xFF555555), fontSize: 11),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Tab bar
-                    Container(
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1A1A1A),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: TabBar(
-                        controller: _logoTabCtrl,
-                        indicator: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFC8860A), Color(0xFFF0A500)],
-                          ),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        indicatorSize: TabBarIndicatorSize.tab,
-                        dividerColor: Colors.transparent,
-                        labelColor: Colors.black,
-                        unselectedLabelColor: const Color(0xFF777777),
-                        labelStyle: const TextStyle(
-                            fontSize: 12, fontWeight: FontWeight.w700),
-                        tabs: const [
-                          Tab(text: '😀 Emoji'),
-                          Tab(text: '🖼️ Image'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Tab content
-                    if (_logoTabCtrl.index == 0) ...[
-                      // Emoji picker
-                      _EmojiPicker(
-                        selected: _selectedEmoji,
-                        onSelect: (e) => setState(() => _selectedEmoji = e),
-                      ),
-                    ] else ...[
-                      // Image picker
-                      GestureDetector(
-                        onTap: _pickLogoImage,
-                        child: Center(
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 110,
-                            height: 110,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF1A1A1A),
-                              border: Border.all(
-                                color: _logoFile != null
-                                    ? const Color(0xFFF0A500)
-                                    : const Color(0xFF2A2A2A),
-                                width: _logoFile != null ? 2.5 : 1.5,
-                              ),
-                              image: _logoFile != null
-                                  ? DecorationImage(
-                                      image: FileImage(_logoFile!),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : null,
-                              boxShadow: _logoFile != null
-                                  ? [
-                                      BoxShadow(
-                                        color: const Color(0xFFF0A500)
-                                            .withOpacity(0.3),
-                                        blurRadius: 16,
-                                      )
-                                    ]
-                                  : null,
-                            ),
-                            child: _logoFile == null
-                                ? const Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.add_photo_alternate_outlined,
-                                        color: Color(0xFF555555),
-                                        size: 28,
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'Upload',
-                                        style: TextStyle(
-                                            color: Color(0xFF555555),
-                                            fontSize: 11),
-                                      ),
-                                    ],
-                                  )
-                                : Align(
-                                    alignment: Alignment.bottomCenter,
-                                    child: Container(
-                                      width: double.infinity,
-                                      padding: const EdgeInsets.only(
-                                          bottom: 6),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.black45,
-                                        borderRadius: BorderRadius.vertical(
-                                          bottom: Radius.circular(55),
-                                        ),
-                                      ),
-                                      child: const Text(
-                                        'Change',
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10),
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Center(
-                        child: Text(
-                          'Max 2 MB · Square crop required',
-                          style: TextStyle(
-                              color: Color(0xFF444444), fontSize: 11),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 20),
-
-                    // ── Preview ──────────────────────────────────────────────
-                    _TeamPreview(
-                      name: _teamNameCtrl.text.trim().isEmpty
-                          ? 'Your Team'
-                          : _teamNameCtrl.text.trim(),
-                      emoji: _selectedEmoji,
-                      logoFile: _logoTabCtrl.index == 1 ? _logoFile : null,
-                    ),
-                    const SizedBox(height: 24),
-
-                    // ── Invite Teammates ─────────────────────────────────────
-                    const _Label('Invite Teammates (up to 3)'),
-                    const SizedBox(height: 4),
-                    const Text(
-                      "Enter teammate email addresses. They'll receive an in-app invite.",
-                      style: TextStyle(
-                          color: Color(0xFF555555), fontSize: 11),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Email input row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _DarkInput(
-                            controller: _emailCtrl,
-                            hint: 'teammate@email.com',
-                            keyboardType: TextInputType.emailAddress,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        GestureDetector(
-                          onTap: _addEmail,
-                          child: Container(
-                            height: 46,
-                            width: 46,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFFC8860A),
-                                  Color(0xFFF0A500)
-                                ],
-                              ),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.add,
-                                color: Colors.black, size: 22),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Added emails list
-                    ..._pendingEmails.asMap().entries.map(
-                          (e) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF141414),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
-                                    color: const Color(0xFF2A2200)),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.email_outlined,
-                                      color: Color(0xFFF0A500), size: 16),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text(
-                                      e.value,
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13),
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () => setState(
-                                        () => _pendingEmails.removeAt(e.key)),
-                                    child: const Icon(Icons.close,
-                                        color: Color(0xFF555555),
-                                        size: 16),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                    const SizedBox(height: 8),
-                    Text(
-                      '${1 + _pendingEmails.length}/4 players in your team',
-                      style: const TextStyle(
-                          color: Color(0xFF777777), fontSize: 12),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            ),
-
-            // ── Join button ─────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              child: _loading
-                  ? Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                              color: Color(0xFFF0A500), strokeWidth: 2.5),
-                        ),
-                        if (_uploadProgress > 0) ...[
-                          const SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: _uploadProgress,
-                              backgroundColor: const Color(0xFF222222),
-                              valueColor: const AlwaysStoppedAnimation(
-                                  Color(0xFFF0A500)),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Uploading logo… ${(_uploadProgress * 100).toInt()}%',
-                            style: const TextStyle(
-                                color: Color(0xFF777777), fontSize: 10),
-                          ),
-                        ],
-                      ],
-                    )
-                  : GestureDetector(
-                      onTap: _joinTournament,
-                      child: Container(
-                        height: 52,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFFC8860A), Color(0xFFF0A500)],
-                          ),
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFFF0A500).withOpacity(0.3),
-                              blurRadius: 16,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: const Center(
-                          child: Text(
-                            'Join Tournament 🎮',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-            ),
-          ],
+            const Expanded(child: Text('Join Tournament',
+                style: TextStyle(color: Colors.white, fontSize: 20,
+                    fontWeight: FontWeight.w800))),
+          ]),
         ),
-      ),
-    );
-  }
-}
+        const SizedBox(height: 4),
+        Padding(
+          padding: const EdgeInsets.only(left: 20, bottom: 8),
+          child: Text(widget.tournament.name,
+              style: const TextStyle(color: Color(0xFFF0A500), fontSize: 12)),
+        ),
 
-// ─── Emoji Picker ─────────────────────────────────────────────────────────────
-
-class _EmojiPicker extends StatelessWidget {
-  final String selected;
-  final ValueChanged<String> onSelect;
-
-  const _EmojiPicker({required this.selected, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: _kEmojis.map((emoji) {
-        final isSelected = emoji == selected;
-        return GestureDetector(
-          onTap: () => onSelect(emoji),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            width: 48,
-            height: 48,
+        // ── Requirement Banner ────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFF2A1800)
-                  : const Color(0xFF1A1A1A),
+              color: const Color(0xFF1A1000),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: isSelected
-                    ? const Color(0xFFF0A500)
-                    : const Color(0xFF2A2A2A),
-                width: isSelected ? 2 : 1,
-              ),
-              boxShadow: isSelected
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFFF0A500).withOpacity(0.3),
-                        blurRadius: 8,
-                      )
-                    ]
-                  : null,
-            ),
-            child: Center(
-                child: Text(emoji, style: const TextStyle(fontSize: 22))),
-          ),
-        );
-      }).toList(),
-    );
-  }
-}
-
-// ─── Team Preview ─────────────────────────────────────────────────────────────
-
-class _TeamPreview extends StatelessWidget {
-  final String name;
-  final String emoji;
-  final File? logoFile;
-
-  const _TeamPreview(
-      {required this.name, required this.emoji, this.logoFile});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A1000), Color(0xFF141414)],
-        ),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF2A2200)),
-      ),
-      child: Row(
-        children: [
-          // Logo circle — shows image if available, else emoji
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF1A1A1A),
               border: Border.all(color: const Color(0xFF2A2200)),
-              image: logoFile != null
-                  ? DecorationImage(
-                      image: FileImage(logoFile!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
             ),
-            child: logoFile == null
-                ? Center(
-                    child:
-                        Text(emoji, style: const TextStyle(fontSize: 28)))
-                : null,
+            child: Row(children: [
+              const Icon(Icons.groups, color: Color(0xFFF0A500), size: 18),
+              const SizedBox(width: 10),
+              Expanded(child: RichText(text: TextSpan(
+                style: const TextStyle(fontSize: 13),
+                children: [
+                  const TextSpan(text: 'This tournament requires ',
+                      style: TextStyle(color: Color(0xFF999999))),
+                  TextSpan(text: '$_required-player teams',
+                      style: const TextStyle(color: Color(0xFFF0A500),
+                          fontWeight: FontWeight.w700)),
+                ],
+              ))),
+            ]),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
+        ),
+        const SizedBox(height: 16),
+
+        // ── Team List ─────────────────────────────────────────────────────
+        Expanded(
+          child: StreamBuilder<List<TeamModel>>(
+            stream: _service.getAllUserTeams(_uid),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFF0A500)));
+              }
+              final teams = snap.data ?? [];
+
+              if (teams.isEmpty) {
+                return _NoTeamsState(required: _required);
+              }
+
+              return Column(children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(children: [
+                    const Text('Select a Team',
+                        style: TextStyle(color: Color(0xFFC8860A), fontSize: 12,
+                            fontWeight: FontWeight.w700)),
+                    const Spacer(),
+                    GestureDetector(
+                      onTap: () => Navigator.push(context, MaterialPageRoute(
+                          builder: (_) => const CreateTeamScreen())),
+                      child: Row(children: const [
+                        Icon(Icons.add, color: Color(0xFF007FFF), size: 14),
+                        SizedBox(width: 4),
+                        Text('New Team', style: TextStyle(
+                            color: Color(0xFF007FFF), fontSize: 12,
+                            fontWeight: FontWeight.w700)),
+                      ]),
+                    ),
+                  ]),
+                ),
+                const SizedBox(height: 10),
+                Expanded(child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  itemCount: teams.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (ctx, i) {
+                    final team = teams[i];
+                    // Compatible = correct size AND fully filled
+                    final sizeMatch = team.maxMembers == _required;
+                    final isFull = team.members.length == _required;
+                    final compatible = sizeMatch && isFull;
+                    final selected = _selectedTeamId == team.id;
+                    return _TeamSelectTile(
+                      team: team,
+                      required: _required,
+                      compatible: compatible,
+                      sizeMatch: sizeMatch,
+                      selected: selected,
+                      onTap: compatible
+                          ? () => setState(() =>
+                              _selectedTeamId = selected ? null : team.id)
+                          : null,
+                    );
+                  },
+                )),
+              ]);
+            },
+          ),
+        ),
+
+        // ── Join Button ───────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          child: StreamBuilder<List<TeamModel>>(
+            stream: _service.getAllUserTeams(_uid),
+            builder: (context, snap) {
+              final teams = snap.data ?? [];
+              final selectedTeam = teams.cast<TeamModel?>()
+                  .firstWhere((t) => t?.id == _selectedTeamId, orElse: () => null);
+
+              if (_joining) {
+                return const Center(child: CircularProgressIndicator(
+                    color: Color(0xFFF0A500)));
+              }
+
+              return GestureDetector(
+                onTap: selectedTeam != null ? () => _join(selectedTeam) : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  height: 52,
+                  decoration: BoxDecoration(
+                    gradient: selectedTeam != null
+                        ? const LinearGradient(
+                            colors: [Color(0xFFC8860A), Color(0xFFF0A500)])
+                        : null,
+                    color: selectedTeam == null ? const Color(0xFF1A1A1A) : null,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: selectedTeam != null
+                          ? Colors.transparent
+                          : const Color(0xFF2A2A2A),
+                    ),
+                    boxShadow: selectedTeam != null ? [BoxShadow(
+                      color: const Color(0xFFF0A500).withOpacity(0.3),
+                      blurRadius: 16, offset: const Offset(0, 4),
+                    )] : null,
                   ),
+                  child: Center(child: Text(
+                    selectedTeam != null
+                        ? 'Join with "${selectedTeam.name}" 🏆'
+                        : 'Select a compatible team above',
+                    style: TextStyle(
+                      color: selectedTeam != null ? Colors.black : const Color(0xFF555555),
+                      fontWeight: FontWeight.w800, fontSize: 14,
+                    ),
+                  )),
                 ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Preview',
-                  style: TextStyle(color: Color(0xFF555555), fontSize: 11),
-                ),
-              ],
-            ),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ])),
     );
   }
 }
 
-// ─── Shared ───────────────────────────────────────────────────────────────────
+// ─── No Teams State ───────────────────────────────────────────────────────────
 
-class _Label extends StatelessWidget {
-  final String text;
-  const _Label(this.text);
+class _NoTeamsState extends StatelessWidget {
+  final int required;
+  const _NoTeamsState({required this.required});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          text,
-          style: const TextStyle(
-            color: Color(0xFFC8860A),
-            fontSize: 12,
-            fontWeight: FontWeight.w700,
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.group_off, color: Color(0xFF333333), size: 56),
+        const SizedBox(height: 16),
+        const Text("You don't have any teams yet",
+            style: TextStyle(color: Color(0xFF777777), fontSize: 14)),
+        const SizedBox(height: 8),
+        Text('Create a $required-player team to join this tournament',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Color(0xFF555555), fontSize: 12)),
+        const SizedBox(height: 24),
+        GestureDetector(
+          onTap: () => Navigator.push(context, MaterialPageRoute(
+              builder: (_) => const CreateTeamScreen())),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                  colors: [Color(0xFF0055AA), Color(0xFF007FFF)]),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Text('Create a Team',
+                style: TextStyle(color: Colors.white,
+                    fontWeight: FontWeight.w800, fontSize: 14)),
           ),
         ),
-      );
+      ]),
+    ),
+  );
 }
 
-class _DarkInput extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final TextInputType keyboardType;
-  final ValueChanged<String>? onChanged;
+// ─── Team Select Tile ─────────────────────────────────────────────────────────
 
-  const _DarkInput({
-    required this.controller,
-    required this.hint,
-    this.keyboardType = TextInputType.text,
-    this.onChanged,
+class _TeamSelectTile extends StatelessWidget {
+  final TeamModel team;
+  final int required;
+  final bool compatible;
+  final bool sizeMatch;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  const _TeamSelectTile({
+    required this.team,
+    required this.required,
+    required this.compatible,
+    required this.sizeMatch,
+    required this.selected,
+    this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final hasImage = team.logoUrl.isNotEmpty;
+    final isFull = team.members.length == team.maxMembers;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: const Color(0xFF2A2A2A)),
-        ),
-        child: TextField(
-          controller: controller,
-          keyboardType: keyboardType,
-          onChanged: onChanged,
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(
-                color: Color(0xFF444444), fontSize: 14),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 12),
+          color: selected
+              ? const Color(0xFF1A1000)
+              : compatible
+                  ? const Color(0xFF141414)
+                  : const Color(0xFF0E0E0E),
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(
+            color: selected
+                ? const Color(0xFFF0A500)
+                : compatible
+                    ? const Color(0xFF222222)
+                    : const Color(0xFF1A1A1A),
+            width: selected ? 2 : 1,
           ),
         ),
-      );
+        child: Row(children: [
+          // Logo
+          Opacity(
+            opacity: compatible ? 1.0 : 0.35,
+            child: Container(
+              width: 46, height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF1A1A1A),
+                border: Border.all(color: compatible
+                    ? const Color(0xFF2A2A2A) : const Color(0xFF1A1A1A)),
+                image: hasImage
+                    ? DecorationImage(
+                        image: NetworkImage(team.logoUrl), fit: BoxFit.cover)
+                    : null,
+              ),
+              child: hasImage ? null
+                  : Center(child: Text(team.logoEmoji,
+                      style: const TextStyle(fontSize: 22))),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Info
+          Expanded(child: Opacity(
+            opacity: compatible ? 1.0 : 0.4,
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(team.name, style: const TextStyle(
+                  color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 3),
+              Row(children: [
+                Text('${team.members.length}/${team.maxMembers} members',
+                    style: TextStyle(
+                      color: compatible
+                          ? const Color(0xFF4CAF50)  // green when eligible
+                          : const Color(0xFF777777),
+                      fontSize: 11,
+                      fontWeight: compatible ? FontWeight.w600 : FontWeight.normal,
+                    )),
+                if (!compatible) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A0A0A),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: const Color(0xFF3A1A1A)),
+                    ),
+                    child: Text(
+                      !sizeMatch
+                          ? 'Needs $required players'
+                          : !isFull
+                              ? 'Not full (${team.members.length}/$required)'
+                              : '',
+                      style: const TextStyle(
+                          color: Color(0xFF884444), fontSize: 9,
+                          fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ]),
+            ]),
+          )),
+
+          // Status indicator
+          if (selected)
+            Container(
+              width: 28, height: 28,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle, color: Color(0xFFF0A500)),
+              child: const Icon(Icons.check, color: Colors.black, size: 16),
+            )
+          else if (!compatible)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A1A1A),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFF2A2A2A)),
+              ),
+              child: const Text('Incompatible',
+                  style: TextStyle(color: Color(0xFF555555), fontSize: 10)),
+            )
+          else
+            Container(
+              width: 24, height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: const Color(0xFF2A2A2A)),
+              ),
+            ),
+        ]),
+      ),
+    );
+  }
 }

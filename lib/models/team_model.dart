@@ -23,15 +23,16 @@ class TeamMember {
 
 class TeamModel {
   final String id;
-  final String tournamentId;
+  final String tournamentId; // empty string for global teams
   final String name;
   final String logoEmoji;
-  final String logoUrl; // Firebase Storage URL, takes priority over emoji if set
+  final String logoUrl;
   final String captainUid;
   final String captainName;
   final List<TeamMember> members;
   final List<String> pendingEmails;
   final bool advancedToFinals;
+  final int maxMembers; // 2-10; configured at team creation
   final DateTime createdAt;
 
   const TeamModel({
@@ -45,6 +46,7 @@ class TeamModel {
     required this.members,
     required this.pendingEmails,
     required this.advancedToFinals,
+    this.maxMembers = 4,
     required this.createdAt,
   });
 
@@ -61,6 +63,7 @@ class TeamModel {
         'members': members.map((m) => m.toMap()).toList(),
         'pendingEmails': pendingEmails,
         'advancedToFinals': advancedToFinals,
+        'maxMembers': maxMembers,
         'createdAt': Timestamp.fromDate(createdAt),
       };
 
@@ -80,6 +83,7 @@ class TeamModel {
       pendingEmails:
           (m['pendingEmails'] as List<dynamic>? ?? []).cast<String>(),
       advancedToFinals: m['advancedToFinals'] as bool? ?? false,
+      maxMembers: (m['maxMembers'] as num?)?.toInt() ?? 4,
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }

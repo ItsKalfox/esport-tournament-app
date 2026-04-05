@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/tournament_model.dart';
 import '../../services/tournament_service.dart';
 import 'create_tournament_screen.dart';
+import 'create_team_screen.dart';
+import 'teams_screen.dart';
 import 'tournament_detail_screen.dart';
 import 'invite_notifications_screen.dart';
 
@@ -23,7 +25,8 @@ class _EventsScreenState extends State<EventsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() => setState(() {}));
   }
 
   @override
@@ -78,6 +81,7 @@ class _EventsScreenState extends State<EventsScreen>
                 tabs: const [
                   Tab(text: 'Browse'),
                   Tab(text: 'My Tournaments'),
+                  Tab(text: 'My Teams'),
                 ],
               ),
             ),
@@ -99,13 +103,16 @@ class _EventsScreenState extends State<EventsScreen>
                     searchQuery: _searchQuery,
                     emptyMessage: 'You haven\'t organized any tournaments',
                   ),
+                  const TeamsScreen(),
                 ],
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: _OrganizeButton(),
+      floatingActionButton: _tabController.index == 2
+          ? _CreateTeamButton()
+          : _OrganizeButton(),
     );
   }
 }
@@ -571,6 +578,49 @@ class _OrganizeButton extends StatelessWidget {
               'Organize',
               style: TextStyle(
                 color: Colors.black,
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreateTeamButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CreateTeamScreen()),
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFFC8860A), Color(0xFFF0A500)],
+          ),
+          borderRadius: BorderRadius.circular(30),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFFF0A500).withOpacity(0.3),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.group_add, color: Color.fromARGB(255, 0, 0, 0), size: 20),
+            SizedBox(width: 6),
+            Text(
+              'Create Team',
+              style: TextStyle(
+                color: Color.fromARGB(255, 0, 0, 0),
                 fontWeight: FontWeight.w800,
                 fontSize: 14,
               ),
