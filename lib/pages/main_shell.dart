@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../pages/store/store_home_screen.dart';
+import '../pages/events/events_screen.dart';
 import '../services/auth_service.dart';
 
 class MainShell extends StatefulWidget {
@@ -15,7 +16,7 @@ class _MainShellState extends State<MainShell> {
 
   final List<Widget> _pages = [
     const _PlaceholderPage(label: 'Home'),
-    const _PlaceholderPage(label: 'Events'),
+    const EventsScreen(),
     const StoreScreen(),
     const _PlaceholderPage(label: 'Profile'),
     const _TempSettingsPage(),
