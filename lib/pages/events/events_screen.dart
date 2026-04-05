@@ -326,125 +326,190 @@ class _TournamentCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: const Color(0xFF141414),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFF222222)),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF171717), Color(0xFF111111)],
-          ),
         ),
+        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                // Trophy icon
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2A1800), Color(0xFF1A1000)],
+            // ── Poster Banner ──────────────────────────────────────────────
+            if (tournament.posterUrl.isNotEmpty)
+              Stack(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: Image.network(
+                      tournament.posterUrl,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (ctx, child, progress) =>
+                          progress == null
+                              ? child
+                              : Container(
+                                  color: const Color(0xFF1A1A1A),
+                                  child: const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFFF0A500),
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                ),
+                      errorBuilder: (_, __, ___) => Container(
+                        color: const Color(0xFF1A1A1A),
+                        child: const Center(
+                          child: Icon(Icons.broken_image,
+                              color: Color(0xFF333333), size: 32),
+                        ),
+                      ),
                     ),
-                    border: Border.all(color: const Color(0xFFC8860A), width: 1),
                   ),
-                  child: const Icon(
-                    Icons.emoji_events,
-                    color: Color(0xFFF0A500),
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        tournament.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
+                  // Status badge overlay on poster
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(6),
+                        border:
+                            Border.all(color: _statusColor.withOpacity(0.6)),
+                      ),
+                      child: Text(
+                        tournament.statusLabel,
+                        style: TextStyle(
+                          color: _statusColor,
+                          fontSize: 10,
                           fontWeight: FontWeight.w700,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'by ${tournament.organizerName}',
-                        style: const TextStyle(
-                          color: Color(0xFF555555),
-                          fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            // ── Card Body ──────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.all(14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // Trophy icon (shown only when no poster)
+                      if (tournament.posterUrl.isEmpty) ...[
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2A1800), Color(0xFF1A1000)],
+                            ),
+                            border: Border.all(
+                                color: const Color(0xFFC8860A), width: 1),
+                          ),
+                          child: const Icon(
+                            Icons.emoji_events,
+                            color: Color(0xFFF0A500),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              tournament.name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'by ${tournament.organizerName}',
+                              style: const TextStyle(
+                                color: Color(0xFF555555),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+                      // Status badge (shown inline only when no poster)
+                      if (tournament.posterUrl.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _statusColor.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                                color: _statusColor.withOpacity(0.4)),
+                          ),
+                          child: Text(
+                            tournament.statusLabel,
+                            style: TextStyle(
+                              color: _statusColor,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                     ],
                   ),
-                ),
-                // Status badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _statusColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: _statusColor.withOpacity(0.4)),
-                  ),
-                  child: Text(
-                    tournament.statusLabel,
-                    style: TextStyle(
-                      color: _statusColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            const Divider(color: Color(0xFF222222), height: 1),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _InfoChip(
-                  icon: Icons.calendar_today,
-                  label: dateStr,
-                ),
-                const SizedBox(width: 12),
-                _InfoChip(
-                  icon: Icons.access_time,
-                  label: tournament.time,
-                ),
-                const SizedBox(width: 12),
-                _InfoChip(
-                  icon: Icons.groups,
-                  label: '${tournament.registeredTeams}/${tournament.maxTeams}',
-                ),
-                const Spacer(),
-                if (totalPrize > 0)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF2A1800), Color(0xFF1A1000)],
+                  const SizedBox(height: 10),
+                  const Divider(color: Color(0xFF222222), height: 1),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _InfoChip(
+                        icon: Icons.calendar_today,
+                        label: dateStr,
                       ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      '🏆 $currency ${totalPrize.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        color: Color(0xFFF0A500),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(width: 12),
+                      _InfoChip(
+                        icon: Icons.access_time,
+                        label: tournament.time,
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      _InfoChip(
+                        icon: Icons.groups,
+                        label:
+                            '${tournament.registeredTeams}/${tournament.maxTeams}',
+                      ),
+                      const Spacer(),
+                      if (totalPrize > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF2A1800), Color(0xFF1A1000)],
+                            ),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '🏆 $currency ${totalPrize.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              color: Color(0xFFF0A500),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

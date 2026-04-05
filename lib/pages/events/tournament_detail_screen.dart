@@ -630,6 +630,7 @@ class _TeamTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasImage = team.logoUrl.isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -645,16 +646,30 @@ class _TeamTile extends StatelessWidget {
                   fontSize: 13,
                   fontWeight: FontWeight.w600)),
           const SizedBox(width: 10),
+          // ── Team Logo ───────────────────────────────────────────────────
           Container(
-            width: 38,
-            height: 38,
+            width: 42,
+            height: 42,
             decoration: BoxDecoration(
+              shape: BoxShape.circle,
               color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: hasImage
+                    ? const Color(0xFF2A2200)
+                    : const Color(0xFF222222),
+              ),
+              image: hasImage
+                  ? DecorationImage(
+                      image: NetworkImage(team.logoUrl),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: Center(
-                child: Text(team.logoEmoji,
-                    style: const TextStyle(fontSize: 20))),
+            child: hasImage
+                ? null
+                : Center(
+                    child: Text(team.logoEmoji,
+                        style: const TextStyle(fontSize: 22))),
           ),
           const SizedBox(width: 12),
           Expanded(

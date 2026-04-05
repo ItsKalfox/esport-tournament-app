@@ -22,6 +22,17 @@ class TournamentService {
     return ref.id;
   }
 
+  // ── Set poster URL after upload ───────────────────────────────────────────
+  Future<void> updatePosterUrl(String tournamentId, String url) async {
+    await _tournaments.doc(tournamentId).update({'posterUrl': url});
+  }
+
+  // ── Set team logo URL after upload ────────────────────────────────────────
+  Future<void> updateTeamLogoUrl(
+      String tournamentId, String teamId, String url) async {
+    await _teams(tournamentId).doc(teamId).update({'logoUrl': url});
+  }
+
   // ── Stream All Tournaments ────────────────────────────────────────────────
   Stream<List<TournamentModel>> getTournaments() {
     return _tournaments

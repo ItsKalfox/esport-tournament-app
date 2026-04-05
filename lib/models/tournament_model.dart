@@ -80,6 +80,7 @@ class TournamentModel {
   final PointConfig pointConfig;
   final List<PrizeSlot> prizeSlots;
   final int winnerCount;
+  final String posterUrl; // Firebase Storage download URL, empty if not uploaded
   final DateTime createdAt;
 
   const TournamentModel({
@@ -99,6 +100,7 @@ class TournamentModel {
     required this.pointConfig,
     required this.prizeSlots,
     required this.winnerCount,
+    this.posterUrl = '',
     required this.createdAt,
   });
 
@@ -168,6 +170,7 @@ Good luck and may the best team win!''';
         'pointConfig': pointConfig.toMap(),
         'prizeSlots': prizeSlots.map((p) => p.toMap()).toList(),
         'winnerCount': winnerCount,
+        'posterUrl': posterUrl,
         'createdAt': Timestamp.fromDate(createdAt),
       };
 
@@ -196,6 +199,7 @@ Good luck and may the best team win!''';
           .map((e) => PrizeSlot.fromMap(e as Map<String, dynamic>))
           .toList(),
       winnerCount: (m['winnerCount'] as num?)?.toInt() ?? 3,
+      posterUrl: m['posterUrl'] as String? ?? '',
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }

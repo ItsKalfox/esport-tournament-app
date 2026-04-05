@@ -26,6 +26,7 @@ class TeamModel {
   final String tournamentId;
   final String name;
   final String logoEmoji;
+  final String logoUrl; // Firebase Storage URL, takes priority over emoji if set
   final String captainUid;
   final String captainName;
   final List<TeamMember> members;
@@ -38,6 +39,7 @@ class TeamModel {
     required this.tournamentId,
     required this.name,
     required this.logoEmoji,
+    this.logoUrl = '',
     required this.captainUid,
     required this.captainName,
     required this.members,
@@ -53,6 +55,7 @@ class TeamModel {
         'tournamentId': tournamentId,
         'name': name,
         'logoEmoji': logoEmoji,
+        'logoUrl': logoUrl,
         'captainUid': captainUid,
         'captainName': captainName,
         'members': members.map((m) => m.toMap()).toList(),
@@ -68,6 +71,7 @@ class TeamModel {
       tournamentId: m['tournamentId'] as String? ?? '',
       name: m['name'] as String? ?? '',
       logoEmoji: m['logoEmoji'] as String? ?? '🎮',
+      logoUrl: m['logoUrl'] as String? ?? '',
       captainUid: m['captainUid'] as String? ?? '',
       captainName: m['captainName'] as String? ?? '',
       members: (m['members'] as List<dynamic>? ?? [])

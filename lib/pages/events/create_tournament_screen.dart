@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../../models/tournament_model.dart';
 import '../../services/tournament_service.dart';
+import '../../services/image_upload_service.dart';
 
 class CreateTournamentScreen extends StatefulWidget {
   const CreateTournamentScreen({super.key});
@@ -23,6 +26,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       TextEditingController(text: TournamentModel.defaultRules);
   DateTime _date = DateTime.now().add(const Duration(days: 7));
   String _time = '18:00';
+  File? _posterFile; // locally picked poster
+  double _uploadProgress = 0;
 
   // Step 2 — Config
   int _maxTeams = 25;
@@ -203,7 +208,21 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
         createdAt: DateTime.now(),
       );
 
-      await _service.createTournament(tournament);
+      final tournamentId = await _service.createTournament(tournament);
+
+      // Upload poster if picked
+      if (_posterFile != null) {
+        setState(() => _uploadProgress = 0.01);
+        final url = await ImageUploadService.uploadImage(
+          file: _posterFile!,
+          storagePath: 'tournament_posters/${DateTime.now().millisecondsSinceEpoch}.jpg',
+          onProgress: (p) {
+            if (mounted) setState(() => _uploadProgress = p);
+          },
+        );
+        await _service.updatePosterUrl(tournamentId, url);
+      }
+
 
       if (mounted) {
         Navigator.pop(context);
@@ -278,8 +297,19 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                     rulesCtrl: _rulesCtrl,
                     date: _date,
                     time: _time,
+                    posterFile: _posterFile,
                     onPickDate: _pickDate,
                     onPickTime: _pickTime,
+                    onPickPoster: () async {
+                      final file = await ImageUploadService.showPickerSheet(
+                        context: context,
+                        cropStyle: CropStyle.rectangle,
+                        aspectRatio: const CropAspectRatio(ratioX: 16, ratioY: 9),
+                        maxBytes: kMaxPosterSizeBytes,
+                        toolbarTitle: 'Crop Tournament Poster',
+                      );
+                      if (file != null) setState(() => _posterFile = file);
+                    },
                   ),
                   _Step2Config(
                     maxTeams: _maxTeams,
@@ -319,9 +349,35 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                   Expanded(
                     flex: 2,
                     child: _loading
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                                color: Color(0xFFF0A500)))
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(
+                                height: 24,
+                                width: 24,
+                                child: CircularProgressIndicator(
+                                    color: Color(0xFFF0A500), strokeWidth: 2.5),
+                              ),
+                              if (_uploadProgress > 0) ...[
+                                const SizedBox(height: 8),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: _uploadProgress,
+                                    backgroundColor: const Color(0xFF222222),
+                                    valueColor: const AlwaysStoppedAnimation(
+                                        Color(0xFFF0A500)),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Uploading poster… ${(_uploadProgress * 100).toInt()}%',
+                                  style: const TextStyle(
+                                      color: Color(0xFF777777), fontSize: 10),
+                                ),
+                              ],
+                            ],
+                          )
                         : _GoldBtn(
                             label: _currentStep == 2 ? 'Create 🏆' : 'Next →',
                             onTap: _nextStep,
@@ -403,8 +459,10 @@ class _Step1BasicInfo extends StatelessWidget {
   final TextEditingController rulesCtrl;
   final DateTime date;
   final String time;
+  final File? posterFile;
   final VoidCallback onPickDate;
   final VoidCallback onPickTime;
+  final VoidCallback onPickPoster;
 
   const _Step1BasicInfo({
     required this.nameCtrl,
@@ -414,6 +472,8 @@ class _Step1BasicInfo extends StatelessWidget {
     required this.time,
     required this.onPickDate,
     required this.onPickTime,
+    required this.onPickPoster,
+    this.posterFile,
   });
 
   @override
@@ -424,6 +484,89 @@ class _Step1BasicInfo extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // ── Poster Upload ──────────────────────────────────────────────
+          const _FieldLabel('Tournament Poster'),
+          const SizedBox(height: 4),
+          const Text(
+            'Recommended: 16:9 ratio, max 5 MB. PNG/JPG.',
+            style: TextStyle(color: Color(0xFF555555), fontSize: 11),
+          ),
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: onPickPoster,
+            child: AspectRatio(
+              aspectRatio: 16 / 9,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1A1A1A),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: posterFile != null
+                        ? const Color(0xFFF0A500)
+                        : const Color(0xFF2A2A2A),
+                    width: posterFile != null ? 2 : 1,
+                  ),
+                  image: posterFile != null
+                      ? DecorationImage(
+                          image: FileImage(posterFile!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
+                ),
+                child: posterFile == null
+                    ? Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2A1800),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(
+                              Icons.add_photo_alternate_outlined,
+                              color: Color(0xFFF0A500),
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Tap to upload poster',
+                            style: TextStyle(
+                                color: Color(0xFF777777), fontSize: 13),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Gallery or Camera',
+                            style: TextStyle(
+                                color: Color(0xFF444444), fontSize: 11),
+                          ),
+                        ],
+                      )
+                    : Align(
+                        alignment: Alignment.bottomRight,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.black54,
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              'Tap to change',
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 11),
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           _FieldLabel('Tournament Name *'),
           _DarkField(controller: nameCtrl, hint: 'e.g. Iron Arena Season 1'),
           const SizedBox(height: 16),

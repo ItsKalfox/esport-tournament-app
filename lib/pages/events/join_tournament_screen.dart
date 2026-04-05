@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_cropper/image_cropper.dart';
 import '../../models/tournament_model.dart';
 import '../../models/team_model.dart';
 import '../../services/tournament_service.dart';
+import '../../services/image_upload_service.dart';
 
 const List<String> _kEmojis = [
   '🎮', '⚔️', '🔥', '🏆', '👾', '💀', '🐉', '🦅', '⚡', '🌪️',
@@ -17,20 +20,49 @@ class JoinTournamentScreen extends StatefulWidget {
   State<JoinTournamentScreen> createState() => _JoinTournamentScreenState();
 }
 
-class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
+class _JoinTournamentScreenState extends State<JoinTournamentScreen>
+    with SingleTickerProviderStateMixin {
   final _service = TournamentService();
   final _teamNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   String _selectedEmoji = '🎮';
+  File? _logoFile;         // locally picked team logo
+  double _uploadProgress = 0;
   final List<String> _pendingEmails = [];
   bool _loading = false;
+
+  // Tab controller for emoji vs image
+  late final TabController _logoTabCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _logoTabCtrl = TabController(length: 2, vsync: this);
+    _logoTabCtrl.addListener(() => setState(() {}));
+  }
 
   @override
   void dispose() {
     _teamNameCtrl.dispose();
     _emailCtrl.dispose();
+    _logoTabCtrl.dispose();
     super.dispose();
   }
+
+  // ─── Pick team logo image ──────────────────────────────────────────────────
+
+  Future<void> _pickLogoImage() async {
+    final file = await ImageUploadService.showPickerSheet(
+      context: context,
+      cropStyle: CropStyle.circle,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      maxBytes: kMaxLogoSizeBytes,
+      toolbarTitle: 'Crop Team Logo',
+    );
+    if (file != null) setState(() => _logoFile = file);
+  }
+
+  // ─── Email helpers ─────────────────────────────────────────────────────────
 
   void _addEmail() {
     final email = _emailCtrl.text.trim().toLowerCase();
@@ -50,7 +82,7 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
     final currentEmail =
         FirebaseAuth.instance.currentUser?.email?.toLowerCase();
     if (email == currentEmail) {
-      _showSnack('You can\'t invite yourself');
+      _showSnack("You can't invite yourself");
       return;
     }
     setState(() {
@@ -59,9 +91,16 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
     });
   }
 
+  // ─── Join / Create team ────────────────────────────────────────────────────
+
   Future<void> _joinTournament() async {
     if (_teamNameCtrl.text.trim().isEmpty) {
       _showSnack('Please enter a team name');
+      return;
+    }
+    // If user is on image tab but picked no image, warn
+    if (_logoTabCtrl.index == 1 && _logoFile == null) {
+      _showSnack('Please pick a team logo image, or switch to emoji');
       return;
     }
     setState(() => _loading = true);
@@ -84,7 +123,22 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
         advancedToFinals: false,
         createdAt: DateTime.now(),
       );
-      await _service.createTeam(team);
+      final teamId = await _service.createTeam(team);
+
+      // Upload logo if user picked an image
+      if (_logoTabCtrl.index == 1 && _logoFile != null) {
+        setState(() => _uploadProgress = 0.01);
+        final url = await ImageUploadService.uploadImage(
+          file: _logoFile!,
+          storagePath:
+              'team_logos/${widget.tournament.id}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          onProgress: (p) {
+            if (mounted) setState(() => _uploadProgress = p);
+          },
+        );
+        await _service.updateTeamLogoUrl(widget.tournament.id, teamId, url);
+      }
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -110,6 +164,8 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
       ),
     );
   }
+
+  // ─── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -146,8 +202,8 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
               padding: const EdgeInsets.only(left: 20, bottom: 4),
               child: Text(
                 widget.tournament.name,
-                style: const TextStyle(
-                    color: Color(0xFFF0A500), fontSize: 12),
+                style:
+                    const TextStyle(color: Color(0xFFF0A500), fontSize: 12),
               ),
             ),
             Expanded(
@@ -156,38 +212,164 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Team Name
+                    // ── Team Name ────────────────────────────────────────────
                     const _Label('Team Name *'),
                     _DarkInput(
                       controller: _teamNameCtrl,
                       hint: 'Enter your team name',
+                      onChanged: (_) => setState(() {}),
                     ),
                     const SizedBox(height: 20),
 
-                    // Logo Picker
-                    const _Label('Team Logo (Emoji)'),
+                    // ── Logo Section with Tab ────────────────────────────────
+                    const _Label('Team Logo'),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Choose an emoji icon or upload a custom image (max 2 MB, square).',
+                      style: TextStyle(color: Color(0xFF555555), fontSize: 11),
+                    ),
                     const SizedBox(height: 10),
-                    _EmojiPicker(
-                      selected: _selectedEmoji,
-                      onSelect: (e) => setState(() => _selectedEmoji = e),
+
+                    // Tab bar
+                    Container(
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: TabBar(
+                        controller: _logoTabCtrl,
+                        indicator: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFC8860A), Color(0xFFF0A500)],
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        dividerColor: Colors.transparent,
+                        labelColor: Colors.black,
+                        unselectedLabelColor: const Color(0xFF777777),
+                        labelStyle: const TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w700),
+                        tabs: const [
+                          Tab(text: '😀 Emoji'),
+                          Tab(text: '🖼️ Image'),
+                        ],
+                      ),
                     ),
+                    const SizedBox(height: 12),
+
+                    // Tab content
+                    if (_logoTabCtrl.index == 0) ...[
+                      // Emoji picker
+                      _EmojiPicker(
+                        selected: _selectedEmoji,
+                        onSelect: (e) => setState(() => _selectedEmoji = e),
+                      ),
+                    ] else ...[
+                      // Image picker
+                      GestureDetector(
+                        onTap: _pickLogoImage,
+                        child: Center(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 110,
+                            height: 110,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF1A1A1A),
+                              border: Border.all(
+                                color: _logoFile != null
+                                    ? const Color(0xFFF0A500)
+                                    : const Color(0xFF2A2A2A),
+                                width: _logoFile != null ? 2.5 : 1.5,
+                              ),
+                              image: _logoFile != null
+                                  ? DecorationImage(
+                                      image: FileImage(_logoFile!),
+                                      fit: BoxFit.cover,
+                                    )
+                                  : null,
+                              boxShadow: _logoFile != null
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFFF0A500)
+                                            .withOpacity(0.3),
+                                        blurRadius: 16,
+                                      )
+                                    ]
+                                  : null,
+                            ),
+                            child: _logoFile == null
+                                ? const Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.add_photo_alternate_outlined,
+                                        color: Color(0xFF555555),
+                                        size: 28,
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Upload',
+                                        style: TextStyle(
+                                            color: Color(0xFF555555),
+                                            fontSize: 11),
+                                      ),
+                                    ],
+                                  )
+                                : Align(
+                                    alignment: Alignment.bottomCenter,
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.only(
+                                          bottom: 6),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.black45,
+                                        borderRadius: BorderRadius.vertical(
+                                          bottom: Radius.circular(55),
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'Change',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10),
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Center(
+                        child: Text(
+                          'Max 2 MB · Square crop required',
+                          style: TextStyle(
+                              color: Color(0xFF444444), fontSize: 11),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
 
-                    // Preview
+                    // ── Preview ──────────────────────────────────────────────
                     _TeamPreview(
                       name: _teamNameCtrl.text.trim().isEmpty
                           ? 'Your Team'
                           : _teamNameCtrl.text.trim(),
                       emoji: _selectedEmoji,
+                      logoFile: _logoTabCtrl.index == 1 ? _logoFile : null,
                     ),
                     const SizedBox(height: 24),
 
-                    // Invite Teammates
+                    // ── Invite Teammates ─────────────────────────────────────
                     const _Label('Invite Teammates (up to 3)'),
                     const SizedBox(height: 4),
                     const Text(
-                      'Enter teammate email addresses. They\'ll receive an in-app invite.',
-                      style: TextStyle(color: Color(0xFF555555), fontSize: 11),
+                      "Enter teammate email addresses. They'll receive an in-app invite.",
+                      style: TextStyle(
+                          color: Color(0xFF555555), fontSize: 11),
                     ),
                     const SizedBox(height: 10),
 
@@ -224,45 +406,44 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Added emails
-                    if (_pendingEmails.isNotEmpty)
-                      ..._pendingEmails.asMap().entries.map(
-                            (e) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF141414),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(
-                                      color: const Color(0xFF2A2200)),
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.email_outlined,
-                                        color: Color(0xFFF0A500), size: 16),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        e.value,
-                                        style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 13),
-                                      ),
+                    // Added emails list
+                    ..._pendingEmails.asMap().entries.map(
+                          (e) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF141414),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                    color: const Color(0xFF2A2200)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.email_outlined,
+                                      color: Color(0xFFF0A500), size: 16),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      e.value,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 13),
                                     ),
-                                    GestureDetector(
-                                      onTap: () => setState(
-                                          () => _pendingEmails.removeAt(e.key)),
-                                      child: const Icon(Icons.close,
-                                          color: Color(0xFF555555),
-                                          size: 16),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () => setState(
+                                        () => _pendingEmails.removeAt(e.key)),
+                                    child: const Icon(Icons.close,
+                                        color: Color(0xFF555555),
+                                        size: 16),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
+                        ),
 
                     const SizedBox(height: 8),
                     Text(
@@ -275,13 +456,40 @@ class _JoinTournamentScreenState extends State<JoinTournamentScreen> {
                 ),
               ),
             ),
-            // Join button
+
+            // ── Join button ─────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                          color: Color(0xFFF0A500)))
+                  ? Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: CircularProgressIndicator(
+                              color: Color(0xFFF0A500), strokeWidth: 2.5),
+                        ),
+                        if (_uploadProgress > 0) ...[
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: _uploadProgress,
+                              backgroundColor: const Color(0xFF222222),
+                              valueColor: const AlwaysStoppedAnimation(
+                                  Color(0xFFF0A500)),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Uploading logo… ${(_uploadProgress * 100).toInt()}%',
+                            style: const TextStyle(
+                                color: Color(0xFF777777), fontSize: 10),
+                          ),
+                        ],
+                      ],
+                    )
                   : GestureDetector(
                       onTap: _joinTournament,
                       child: Container(
@@ -360,8 +568,8 @@ class _EmojiPicker extends StatelessWidget {
                     ]
                   : null,
             ),
-            child:
-                Center(child: Text(emoji, style: const TextStyle(fontSize: 22))),
+            child: Center(
+                child: Text(emoji, style: const TextStyle(fontSize: 22))),
           ),
         );
       }).toList(),
@@ -374,8 +582,10 @@ class _EmojiPicker extends StatelessWidget {
 class _TeamPreview extends StatelessWidget {
   final String name;
   final String emoji;
+  final File? logoFile;
 
-  const _TeamPreview({required this.name, required this.emoji});
+  const _TeamPreview(
+      {required this.name, required this.emoji, this.logoFile});
 
   @override
   Widget build(BuildContext context) {
@@ -390,16 +600,26 @@ class _TeamPreview extends StatelessWidget {
       ),
       child: Row(
         children: [
+          // Logo circle — shows image if available, else emoji
           Container(
             width: 52,
             height: 52,
             decoration: BoxDecoration(
+              shape: BoxShape.circle,
               color: const Color(0xFF1A1A1A),
-              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFF2A2200)),
+              image: logoFile != null
+                  ? DecorationImage(
+                      image: FileImage(logoFile!),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
             ),
-            child: Center(
-                child: Text(emoji, style: const TextStyle(fontSize: 28))),
+            child: logoFile == null
+                ? Center(
+                    child:
+                        Text(emoji, style: const TextStyle(fontSize: 28)))
+                : null,
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -417,8 +637,7 @@ class _TeamPreview extends StatelessWidget {
                 const SizedBox(height: 4),
                 const Text(
                   'Preview',
-                  style:
-                      TextStyle(color: Color(0xFF555555), fontSize: 11),
+                  style: TextStyle(color: Color(0xFF555555), fontSize: 11),
                 ),
               ],
             ),
@@ -453,11 +672,13 @@ class _DarkInput extends StatelessWidget {
   final TextEditingController controller;
   final String hint;
   final TextInputType keyboardType;
+  final ValueChanged<String>? onChanged;
 
   const _DarkInput({
     required this.controller,
     required this.hint,
     this.keyboardType = TextInputType.text,
+    this.onChanged,
   });
 
   @override
@@ -470,6 +691,7 @@ class _DarkInput extends StatelessWidget {
         child: TextField(
           controller: controller,
           keyboardType: keyboardType,
+          onChanged: onChanged,
           style: const TextStyle(color: Colors.white, fontSize: 14),
           decoration: InputDecoration(
             hintText: hint,
