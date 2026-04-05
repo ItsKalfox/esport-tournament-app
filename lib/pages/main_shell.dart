@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../pages/store/store_home_screen.dart';
+import '../pages/chat/ai_chat_screen.dart';
 import '../pages/techcommunity/tech_community.dart';
 import '../services/auth_service.dart';
 
@@ -326,12 +327,11 @@ class _HomeDashboardPageState extends State<_HomeDashboardPage> {
                         _FeatureTile(
                           icon: Icons.forum,
                           label: 'Chat',
-                          onTap: () =>
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Chat feature coming soon'),
-                                ),
-                              ),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AIChatScreen(),
+                            ),
+                          ),
                         ),
                         _FeatureTile(
                           icon: Icons.memory,
