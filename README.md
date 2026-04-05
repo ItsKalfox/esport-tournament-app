@@ -23,43 +23,59 @@ The system aims to create a **community-driven esports ecosystem** where players
 - View community posts from other gamers
 
 ## Gaming Marketplace
-- Buy gaming equipment
-- PC components
-- Consoles
-- Gaming accessories
+- Buy gaming equipment — PC components, consoles, accessories
+- Stripe payment integration (card payments)
+- Order tracking with animated status timeline
+- Wishlist to save favourite products
+- Saved delivery addresses for faster checkout
+- Cart with quantity controls and free delivery threshold
 
 ## User System
-- User authentication
+- Email & password authentication
+- Google Sign-In
 - Player profiles
 - Team management
+- Role-based access (user / admin)
 
 ---
 
 # Tech Stack
 
 ### Frontend
-- Flutter
+- Flutter (Mobile App)
+- React (Web Admin Panel)
 
 ### Backend
-- Firebase
-
-### Services Used
-- Firebase Authentication
-- Cloud Firestore
-- Firebase Storage
+- Firebase Firestore (database)
+- Firebase Auth (authentication)
+- Firebase Storage (images)
+- Firebase Cloud Functions (Stripe payments)
+- Stripe (payment gateway)
 
 ---
 
 # Project Structure
 
 ```
-lib/
- ├── main.dart
- ├── firebase_options.dart
- ├── pages/
- ├── models/
- ├── services/
- └── widgets/
+esport-tournament-app/
+ ├── lib/
+ │    ├── main.dart
+ │    ├── firebase_options.dart
+ │    ├── pages/
+ │    │    ├── main_shell.dart
+ │    │    ├── auth/
+ │    │    ├── signup/
+ │    │    └── store/
+ │    ├── models/
+ │    ├── services/
+ │    ├── providers/
+ │    └── widgets/
+ ├── functions/               ← Firebase Cloud Functions (Stripe)
+ │    ├── index.js
+ │    └── package.json
+ └── admin-panel/             ← React web admin panel
+      ├── src/
+      └── package.json
 ```
 
 ---
@@ -71,7 +87,9 @@ Before running the project, install the following:
 - Flutter SDK
 - Dart SDK
 - Android Studio or VS Code
+- Node.js (v20 or higher)
 - FlutterFire CLI
+- Firebase CLI
 
 ---
 
@@ -83,7 +101,7 @@ Flutter 3.41.0
 Dart 3.11.0
 ```
 
-### Firebase
+### Firebase (Flutter)
 ```
 firebase_core: ^4.5.0
 cloud_firestore: ^6.1.3
@@ -107,19 +125,17 @@ firebase-tools: ^15.9.0
 
 This project uses **FlutterFire CLI** for Firebase configuration.
 
-Firebase has already been configured using:
-
-```
-flutterfire configure
-```
-
-This command generates the file:
+Firebase has already been configured. The config file is already in the repo:
 
 ```
 lib/firebase_options.dart
 ```
 
-which connects the application to Firebase automatically.
+If you need to reconfigure (e.g. new Firebase project), run:
+
+```bash
+flutterfire configure
+```
 
 ---
 
@@ -127,49 +143,135 @@ which connects the application to Firebase automatically.
 
 ## 1. Clone the repository
 
-```
+```bash
 git clone https://github.com/ItsKalfox/esport-tournament-app.git
-```
-
-Navigate to the project directory:
-
-```
 cd esport-tournament-app
 ```
 
 ---
 
-## 2. Install dependencies
+## 2. Install Flutter dependencies
 
-```
+```bash
 flutter pub get
 ```
 
 ---
 
-## 3. Configure Firebase (if needed)
+## 3. Add your SHA-1 fingerprint to Firebase (required for Google Sign-In)
 
-Install FlutterFire CLI:
+Every team member must add their own machine's SHA-1 fingerprint to Firebase for Google Sign-In to work.
 
+**Step 1 — Get your SHA-1:**
+
+Windows:
+```bash
+keytool -list -v -keystore "C:\Users\YOUR_USERNAME\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
 ```
-dart pub global activate flutterfire_cli
+
+Mac:
+```bash
+keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
 ```
 
-Then run:
+Look for the `SHA1:` line in the output.
 
-```
-flutterfire configure
+**Step 2 — Add to Firebase:**
+- Go to [Firebase Console](https://console.firebase.google.com) → `esport-tournament-app-3266f`
+- Project Settings (gear icon) → Your Apps → Android app
+- Click **Add fingerprint** → paste your SHA-1 → Save
+- Download the updated `google-services.json` and replace `android/app/google-services.json`
+
+> ⚠️ Without this step, Google Sign-In will fail with "Google sign-in failed" error.  
+> Email/password login works without SHA-1.
+
+---
+
+## 4. Run the Flutter app
+
+Connect a device or start an emulator, then run:
+
+```bash
+flutter run
 ```
 
 ---
 
-## 4. Run the application
+## 5. Run the Admin Panel (optional)
 
-Connect a device or start an emulator, then run:
+The web admin panel is used to manage products, categories, banners and orders.
 
+```bash
+cd admin-panel
+npm install
+npm start
 ```
-flutter run
-```
+
+Opens at `http://localhost:3000` — log in with your Firebase admin account.
+
+> To set up an admin account, see the Admin Panel Setup section below.
+
+---
+
+# Admin Panel Setup
+
+To access the admin panel, set up an admin account:
+
+**1. Register normally in the app** — this creates a user in Firebase Auth and a document in Firestore `users/{uid}` with `role: "user"`.
+
+**2. Upgrade to admin in Firestore:**
+- Go to [Firebase Console](https://console.firebase.google.com) → Firestore → `users` collection
+- Find the document for your user (by UID or email)
+- Change the `role` field from `"user"` to `"admin"`
+
+---
+
+# Stripe Payments
+
+Stripe payments are handled by **Firebase Cloud Functions** — no local server needed.
+
+The Cloud Function is already deployed. It handles creating payment intents securely on the server side.
+
+### Test Cards
+
+The app uses Stripe in **test mode**. No real money is charged.
+
+> For all test cards use:
+> - **Expiry date:** Any future date e.g. `12/29`
+> - **CVC:** Any 3 digits e.g. `123`
+> - **ZIP / Postal code:** Any 5 digits e.g. `10001`
+> - **Name:** Any name
+
+### Basic Cards
+
+| Card Number | Brand | Scenario |
+|---|---|---|
+| `4242 4242 4242 4242` | Visa | Payment succeeds ✅ |
+| `4000 0566 5566 5556` | Visa (debit) | Payment succeeds ✅ |
+| `5555 5555 5555 4444` | Mastercard | Payment succeeds ✅ |
+| `2223 0031 2200 3222` | Mastercard (2-series) | Payment succeeds ✅ |
+| `5200 8282 8282 8210` | Mastercard (debit) | Payment succeeds ✅ |
+| `3782 822463 10005` | American Express | Payment succeeds ✅ |
+| `6011 1111 1111 1117` | Discover | Payment succeeds ✅ |
+
+### Failure Scenarios
+
+| Card Number | Scenario |
+|---|---|
+| `4000 0000 0000 0002` | Card declined ❌ |
+| `4000 0000 0000 9995` | Insufficient funds ❌ |
+| `4000 0000 0000 0069` | Expired card ❌ |
+| `4000 0000 0000 0127` | Incorrect CVC ❌ |
+| `4000 0000 0000 0119` | Processing error ❌ |
+| `4242 4242 4242 4241` | Incorrect card number ❌ |
+
+### 3D Secure (Authentication Required)
+
+| Card Number | Scenario |
+|---|---|
+| `4000 0025 0000 3155` | Always requires authentication |
+| `4000 0027 6000 3184` | Authentication required for some payments |
+| `4000 0082 6000 3178` | 3D Secure 2, requires authentication |
 
 ---
 
@@ -191,3 +293,11 @@ flutter run
 - Firebase Explorer
 
 ---
+
+# Notes for Team Members
+
+- **No local server needed** — images are on Firebase Storage, payments go through Firebase Cloud Functions
+- **Google Sign-In requires SHA-1** — each team member must add their debug SHA-1 to Firebase (see step 3 above)
+- **Admin panel image uploads** go directly to Firebase Storage — no IP addresses to configure
+- **User data** is saved to Firestore `users/{uid}` on registration with `role: "user"` — upgrade to `"admin"` manually for admin panel access
+- The `.env` file in `server/` is kept for reference only — the app no longer uses the Express server
