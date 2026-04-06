@@ -7,6 +7,7 @@ import '../pages/events/events_screen.dart';
 import '../pages/chat/ai_chat_screen.dart';
 import '../pages/techcommunity/tech_community.dart';
 import '../pages/watch_live/watch_live_screen.dart';
+import '../pages/meetups/meetups_screen.dart';
 import '../services/auth_service.dart';
 
 const kAccent = Color(0xFFFF8A00);
@@ -358,14 +359,13 @@ class _HomeDashboardPageState extends State<_HomeDashboardPage> {
                           ),
                         ),
                         _FeatureTile(
-                          icon: Icons.calendar_month,
-                          label: 'Calendar',
-                          onTap: () =>
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Calendar feature coming soon'),
-                                ),
-                              ),
+                          icon: Icons.groups,
+                          label: 'Meetups',
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const MeetupsScreen(),
+                            ),
+                          ),
                         ),
                       ],
                     ),
