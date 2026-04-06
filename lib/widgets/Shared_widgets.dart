@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class AppColors {
   static const orange = Color(0xFFFF8400);
@@ -157,7 +158,12 @@ class AuthHeader extends StatelessWidget {
       children: [
         Container(
           width: double.infinity,
-          color: AppColors.orange,
+          decoration: BoxDecoration(
+            color: AppColors.orange,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(24),  // Match the AuthCard border radius
+            ),
+          ),
           padding: const EdgeInsets.fromLTRB(28, 48, 28, 64),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,10 +509,10 @@ class GoogleButton extends StatelessWidget {
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CustomPaint(painter: _GooglePainter()),
+                  FaIcon(
+                    FontAwesomeIcons.google,
+                    size: 18,
+                    color: AppColors.text,
                   ),
                   const SizedBox(width: 10),
                   const Text(
@@ -522,52 +528,6 @@ class GoogleButton extends StatelessWidget {
       ),
     );
   }
-}
-
-class _GooglePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    final c = Offset(size.width / 2, size.height / 2);
-    final r = size.width / 2;
-    paint.color = const Color(0xFF4285F4);
-    canvas.drawArc(
-      Rect.fromCircle(center: c, radius: r),
-      -0.5,
-      3.14,
-      true,
-      paint,
-    );
-    paint.color = const Color(0xFFEA4335);
-    canvas.drawArc(
-      Rect.fromCircle(center: c, radius: r),
-      -1.6,
-      1.8,
-      true,
-      paint,
-    );
-    paint.color = const Color(0xFFFBBC05);
-    canvas.drawArc(
-      Rect.fromCircle(center: c, radius: r),
-      1.9,
-      1.1,
-      true,
-      paint,
-    );
-    paint.color = const Color(0xFF34A853);
-    canvas.drawArc(
-      Rect.fromCircle(center: c, radius: r),
-      3.0,
-      0.9,
-      true,
-      paint,
-    );
-    paint.color = AppColors.card2;
-    canvas.drawCircle(c, r * 0.55, paint);
-  }
-
-  @override
-  bool shouldRepaint(_) => false;
 }
 
 // ─── Or Divider ──────────────────────────────────────────────────

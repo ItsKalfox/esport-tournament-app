@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../pages/store/store_home_screen.dart';
+import '../pages/events/events_screen.dart';
 import '../pages/chat/ai_chat_screen.dart';
 import '../pages/techcommunity/tech_community.dart';
 import '../services/auth_service.dart';
@@ -53,6 +54,14 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
+
+  final List<Widget> _pages = [
+    const _PlaceholderPage(label: 'Home'),
+    const EventsScreen(),
+    const StoreScreen(),
+    const _PlaceholderPage(label: 'Profile'),
+    const _TempSettingsPage(),
+  ];
 
   @override
   Widget build(BuildContext context) {
