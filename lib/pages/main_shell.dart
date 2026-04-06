@@ -8,6 +8,7 @@ import '../pages/chat/ai_chat_screen.dart';
 import '../pages/techcommunity/tech_community.dart';
 import '../pages/watch_live/watch_live_screen.dart';
 import '../pages/meetups/meetups_screen.dart';
+import '../../Gamer_passport_screen.dart' show ProfileScreen;
 import '../services/auth_service.dart';
 
 const kAccent = Color(0xFFFF8A00);
@@ -72,7 +73,7 @@ class _MainShellState extends State<MainShell> {
       const EventsScreen(),
       const TechCommunityScreen(),
       const StoreScreen(),
-      const _TempSettingsPage(),
+      const ProfileScreen(),
     ];
 
     return Scaffold(
@@ -327,7 +328,7 @@ class _HomeDashboardPageState extends State<_HomeDashboardPage> {
                       children: [
                         _FeatureTile(
                           icon: Icons.emoji_events,
-                          label: 'Tournaments',
+                          label: 'Tournaments Arena',
                           onTap: () => widget.onSelectTab(1),
                         ),
                         _FeatureTile(
