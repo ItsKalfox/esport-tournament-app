@@ -9,6 +9,7 @@ import '../pages/techcommunity/tech_community.dart';
 import '../pages/watch_live/watch_live_screen.dart';
 import '../pages/meetups/meetups_screen.dart';
 import '../../Gamer_passport_screen.dart' show ProfileScreen;
+import '../pages/signup/login.dart' show LoginPage;
 import '../services/auth_service.dart';
 
 const kAccent = Color(0xFFFF8A00);
@@ -676,9 +677,14 @@ class _TournamentImage extends StatelessWidget {
 // ─── Temp Settings Page ───────────────────────────────────────────────────────
 // Temporary — replace with real Settings screen when ready
 
-class _TempSettingsPage extends StatelessWidget {
+class _TempSettingsPage extends StatefulWidget {
   const _TempSettingsPage();
 
+  @override
+  State<_TempSettingsPage> createState() => _TempSettingsPageState();
+}
+
+class _TempSettingsPageState extends State<_TempSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -703,7 +709,15 @@ class _TempSettingsPage extends StatelessWidget {
             ],
             const SizedBox(height: 32),
             GestureDetector(
-              onTap: () async => await AuthService.signOut(),
+              onTap: () async {
+                await AuthService.signOut();
+                if (mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                    (route) => false,
+                  );
+                }
+              },
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,

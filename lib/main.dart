@@ -7,7 +7,9 @@ import 'providers/cart_provider.dart';
 import 'providers/wishlist_provider.dart';
 import 'services/stripe_service.dart';
 import 'pages/main_shell.dart';
-import 'pages/signup/login.dart';
+import 'screens/onboarding_screen.dart';
+import 'screens/splash.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,13 +39,87 @@ class OnboardingApp extends StatelessWidget {
           ),
           useMaterial3: true,
         ),
-        home: const _AuthGate(),
+        home: const _SplashLauncher(),
       ),
     );
   }
 }
 
-// ─── Auth Gate ────────────────────────────────────────────────────────────────
+class _SplashLauncher extends StatefulWidget {
+  const _SplashLauncher();
+
+  @override
+  State<_SplashLauncher> createState() => _SplashLauncherState();
+}
+
+class _SplashLauncherState extends State<_SplashLauncher> {
+  bool _navigated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(milliseconds: 3500), () {
+      if (!mounted || _navigated) return;
+      _navigated = true;
+      Navigator.of(context).pushReplacement(PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const _AuthGate(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 450),
+      ));
+    });
+  }
+
+  void navigateToAuth() {
+    // Always attempt navigation when user explicitly taps GET STARTED.
+    // Mark `_navigated` to avoid duplicate auto-navigation from the timer,
+    // but do not block manual navigation if the flag was previously set.
+    _navigated = true;
+    Navigator.of(context).pushReplacement(PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) =>
+          const OnboardingScreen(),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(opacity: animation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 450),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SplashScreen(onGetStarted: navigateToAuth);
+  }
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) => const OnboardingApp();
+}
+
+class SplashScreenWrapper extends StatelessWidget {
+  const SplashScreenWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SplashScreen(
+      key: UniqueKey(),
+      onGetStarted: () {
+      Navigator.of(context).pushReplacement(PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const OnboardingScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        transitionDuration: const Duration(milliseconds: 450),
+      ));
+    });
+  }
+}
+
 class _AuthGate extends StatelessWidget {
   const _AuthGate();
 
@@ -52,42 +128,30 @@ class _AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Still checking auth state — show splash
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _SplashScreen();
+          return const SplashScreenWrapper();
         }
 
-        // User is logged in — load wishlist and go to MainShell
         if (snapshot.hasData && snapshot.data != null) {
-          context.read<WishlistProvider>().loadWishlist();
-          return const MainShell();
+          final user = snapshot.data!;
+          return FutureBuilder<bool>(
+            future: AuthService.isOnboardingCompleted(user.uid),
+            builder: (context, snap) {
+              if (snap.connectionState == ConnectionState.waiting) {
+                return const SplashScreenWrapper();
+              }
+              final completed = snap.data ?? false;
+              if (!completed) {
+                return const OnboardingScreen();
+              }
+              context.read<WishlistProvider>().loadWishlist();
+              return const MainShell();
+            },
+          );
         }
 
-        // User is not logged in — show Login
-        return const LoginPage();
+        return const OnboardingScreen();
       },
-    );
-  }
-}
-
-// ─── Splash Screen ────────────────────────────────────────────────────────────
-class _SplashScreen extends StatelessWidget {
-  const _SplashScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFF0F0F0F),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.sports_esports, color: Color(0xFFFF8400), size: 64),
-            SizedBox(height: 24),
-            CircularProgressIndicator(color: Color(0xFFFF8400), strokeWidth: 2),
-          ],
-        ),
-      ),
     );
   }
 }

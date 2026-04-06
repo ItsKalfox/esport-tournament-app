@@ -1,5 +1,5 @@
-name: onboardings
-description: "A new Flutter project for the onboarding flow."
+name: esport_tournament_app
+description: "Esport Tournament App"
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -26,6 +26,7 @@ dependencies:
   image_cropper: ^12.1.1
   font_awesome_flutter: ^10.7.0
   youtube_player_flutter: ^9.1.3
+  google_fonts: ^6.1.0
   flutter_inappwebview: ^6.0.0
 
 
@@ -34,6 +35,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -79,3 +81,10 @@ fonts:
            weight: 500
          - asset: fonts/Poppins-SemiBold.ttf
            weight: 600
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/logo.png"
+  adaptive_icon_background: "#FF8A00"
+  adaptive_icon_foreground: "assets/images/logo.png"

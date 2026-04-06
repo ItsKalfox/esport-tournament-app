@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/Shared_widgets.dart';
 import '../../services/auth_service.dart';
 import 'login.dart';
+import '../../main.dart';
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -137,14 +138,29 @@ class _SignupPageState extends State<SignupPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthCard(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const SplashScreenWrapper()),
+          );
+        }
+      },
+      child: AuthCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AuthHeader(
             title: 'Create\nAccount',
             subtitle: 'Please sign up to continue',
-            onBack: () => Navigator.pop(context),
+            onBack: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const SplashScreenWrapper()),
+              );
+            },
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(28, 8, 28, 32),
@@ -309,6 +325,7 @@ class _SignupPageState extends State<SignupPage> {
           ),
         ],
       ),
+    ),
     );
   }
 }

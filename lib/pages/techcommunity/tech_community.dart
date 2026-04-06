@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'create_post_screen.dart';
+import '../main_shell.dart';
 
 class Post {
   final String id;
@@ -246,110 +247,128 @@ class _TechCommunityScreenState extends State<TechCommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bg,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _TopBar(onSearch: _openSearch)),
-            SliverToBoxAdapter(
-              child: Divider(
-                color: accent.withValues(alpha: 0.9),
-                thickness: 3,
-                indent: 12,
-                endIndent: 12,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const MainShell()),
+            (route) => false,
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: bg,
+        body: SafeArea(
+          child: CustomScrollView(
+            slivers: <Widget>[
+              SliverToBoxAdapter(
+                child: _TopBar(onSearch: _openSearch),
               ),
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+              SliverToBoxAdapter(
+                child: Divider(
+                  color: accent.withOpacity(0.9),
+                  thickness: 3,
+                  indent: 12,
+                  endIndent: 12,
                 ),
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: accent,
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 14,
-                      horizontal: 18,
+              ),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: accent,
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 14,
+                        horizontal: 18,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const CreatePostScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.edit, color: Colors.white),
+                    label: const Text(
+                      'CREATE POST',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const CreatePostScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.edit, color: Colors.white),
-                  label: const Text(
-                    'CREATE POST',
+                ),
+              ),
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Tech Feed',
                     style: TextStyle(
-                      fontWeight: FontWeight.w700,
                       color: Colors.white,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
               ),
-            ),
-            const SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text(
-                  'Tech Feed',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 12),
               ),
-            ),
-            SliverToBoxAdapter(child: const SizedBox(height: 12)),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('posts')
-                  .orderBy('createdAt', descending: true)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const SliverToBoxAdapter(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20),
-                        child: CircularProgressIndicator(color: accent),
-                      ),
-                    ),
-                  );
-                }
-
-                final firestorePosts = snapshot.data?.docs ?? [];
-
-                final localFiltered = _filteredLocalPosts();
-                final remoteFiltered = _filteredFirestorePosts(firestorePosts);
-
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    if (index < localFiltered.length) {
-                      final localIndex = posts.indexOf(localFiltered[index]);
-                      return _buildPostCard(context, localIndex);
-                    } else {
-                      final postIndex = index - localFiltered.length;
-                      if (postIndex < remoteFiltered.length) {
-                        final postDoc = remoteFiltered[postIndex];
-                        return _buildFirestorePostCard(context, postDoc);
-                      }
-                      return null;
-                    }
-                  }, childCount: localFiltered.length + remoteFiltered.length),
-                );
-              },
-            ),
-          ],
+              _buildPostsSliver(),
+            ],
+          ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPostsSliver() {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('posts')
+          .orderBy('createdAt', descending: true)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: CircularProgressIndicator(color: accent),
+              ),
+            ),
+          );
+        }
+
+        final firestorePosts = snapshot.data?.docs ?? [];
+        final localFiltered = _filteredLocalPosts();
+        final remoteFiltered = _filteredFirestorePosts(firestorePosts);
+
+        return SliverList(
+          delegate: SliverChildBuilderDelegate((context, index) {
+            if (index < localFiltered.length) {
+              final localIndex = posts.indexOf(localFiltered[index]);
+              return _buildPostCard(context, localIndex);
+            } else {
+              final postIndex = index - localFiltered.length;
+              if (postIndex < remoteFiltered.length) {
+                final postDoc = remoteFiltered[postIndex];
+                return _buildFirestorePostCard(context, postDoc);
+              }
+              return null;
+            }
+          }, childCount: localFiltered.length + remoteFiltered.length),
+        );
+      },
     );
   }
 
@@ -482,7 +501,7 @@ class _TechCommunityScreenState extends State<TechCommunityScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.2),
+                          color: accent.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -525,9 +544,9 @@ class _TechCommunityScreenState extends State<TechCommunityScreen> {
                                   ? Colors.red[700]
                                   : const Color(0xFF2A2A2A),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(
-                                color: accent.withValues(alpha: 0.6),
-                              ),
+                                border: Border.all(
+                                  color: accent.withOpacity(0.6),
+                                ),
                             ),
                             child: Icon(
                               isLiked ? Icons.favorite : Icons.favorite_border,
@@ -641,7 +660,7 @@ class _TechCommunityScreenState extends State<TechCommunityScreen> {
                                   : const Color(0xFF2A2A2A),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: accent.withValues(alpha: 0.6),
+                                color: accent.withOpacity(0.6),
                               ),
                             ),
                             child: Icon(
@@ -691,7 +710,7 @@ class _TechCommunityScreenState extends State<TechCommunityScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFF2A2A2A),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: accent.withValues(alpha: 0.6)),
+        border: Border.all(color: accent.withOpacity(0.6)),
       ),
       child: Icon(icon, color: Colors.white, size: 18),
     );
