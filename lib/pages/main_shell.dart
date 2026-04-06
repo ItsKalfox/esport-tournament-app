@@ -6,6 +6,7 @@ import '../pages/store/store_home_screen.dart';
 import '../pages/events/events_screen.dart';
 import '../pages/chat/ai_chat_screen.dart';
 import '../pages/techcommunity/tech_community.dart';
+import '../pages/watch_live/watch_live_screen.dart';
 import '../services/auth_service.dart';
 
 const kAccent = Color(0xFFFF8A00);
@@ -67,7 +68,7 @@ class _MainShellState extends State<MainShell> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       _HomeDashboardPage(onSelectTab: (i) => setState(() => _currentIndex = i)),
-      const _PlaceholderPage(label: 'Events'),
+      const EventsScreen(),
       const TechCommunityScreen(),
       const StoreScreen(),
       const _TempSettingsPage(),
@@ -350,12 +351,11 @@ class _HomeDashboardPageState extends State<_HomeDashboardPage> {
                         _FeatureTile(
                           icon: Icons.live_tv,
                           label: 'Watch Live',
-                          onTap: () =>
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Live streams coming soon'),
-                                ),
-                              ),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const WatchLiveScreen(),
+                            ),
+                          ),
                         ),
                         _FeatureTile(
                           icon: Icons.calendar_month,
