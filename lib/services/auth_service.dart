@@ -166,4 +166,32 @@ class AuthService {
         return 'Something went wrong. Please try again.';
     }
   }
+
+  // ── Complete Onboarding ────────────────────────────────────────────────────
+  static Future<bool> completeOnboarding() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      await _db.collection('users').doc(user.uid).update({
+        'onboardingCompleted': true,
+        'onboardingCompletedAt': FieldValue.serverTimestamp(),
+      });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ── Check Onboarding Status ─────────────────────────────────────────────
+  static Future<bool> isOnboardingCompleted(String uid) async {
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      if (!doc.exists) return false;
+      final data = doc.data();
+      return data != null && (data['onboardingCompleted'] == true);
+    } catch (e) {
+      return false;
+    }
+  }
 }

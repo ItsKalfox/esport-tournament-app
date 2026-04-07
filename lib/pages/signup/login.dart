@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../main_shell.dart';
 import '../auth/forgot _password.dart';
 import '../signup/sign _up.dart';
+import '../../main.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -133,13 +134,29 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AuthCard(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const SplashScreenWrapper()),
+          );
+        }
+      },
+      child: AuthCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AuthHeader(
+          AuthHeader(
             title: 'Welcome\nBack',
             subtitle: 'Please sign in to continue',
+            onBack: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const SplashScreenWrapper()),
+              );
+            },
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(28, 8, 28, 32),
@@ -216,6 +233,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
         ],
       ),
+    ),
     );
   }
 }
