@@ -70,13 +70,13 @@ esport-tournament-app/
  │    ├── services/
  │    ├── providers/
  │    └── widgets/
- ├── functions/               ← Firebase Cloud Functions (Stripe)
- │    ├── index.js
- │    └── package.json
- └── admin-panel/             ← React web admin panel
-      ├── src/
+ └── functions/               ← Firebase Cloud Functions (Stripe)
+      ├── index.js
       └── package.json
 ```
+
+> **Admin Panel** is maintained in a separate repository:  
+> 🔗 [https://github.com/SMDTS/esport-tournament-admin](https://github.com/SMDTS/esport-tournament-admin)
 
 ---
 
@@ -101,12 +101,28 @@ Flutter 3.41.0
 Dart 3.11.0
 ```
 
-### Firebase (Flutter)
+### Flutter Dependancies
 ```
 firebase_core: ^4.5.0
 cloud_firestore: ^6.1.3
 firebase_auth: ^6.2.0
 firebase_storage: ^13.1.0
+cupertino_icons: ^1.0.8
+firebase_core: ^4.5.0
+cloud_firestore: ^6.1.3
+firebase_auth: ^6.2.0
+provider: ^6.1.1
+flutter_stripe: ^10.1.1
+http: ^1.2.1
+cloud_functions: ^6.0.7
+google_sign_in: ^6.2.1
+firebase_storage: ^13.1.0
+image_picker: ^1.2.1
+image_cropper: ^12.1.1
+font_awesome_flutter: ^10.7.0
+youtube_player_flutter: ^9.1.3
+google_fonts: ^6.1.0
+flutter_inappwebview: ^6.0.0
 ```
 
 ### FlutterFire CLI
@@ -199,10 +215,12 @@ flutter run
 
 ## 5. Run the Admin Panel (optional)
 
-The web admin panel is used to manage products, categories, banners and orders.
+The admin panel is in a separate repository:  
+🔗 [https://github.com/SMDTS/esport-tournament-admin](https://github.com/SMDTS/esport-tournament-admin)
 
 ```bash
-cd admin-panel
+git clone https://github.com/SMDTS/esport-tournament-admin.git
+cd esport-tournament-admin
 npm install
 npm start
 ```
@@ -298,6 +316,6 @@ The app uses Stripe in **test mode**. No real money is charged.
 
 - **No local server needed** — images are on Firebase Storage, payments go through Firebase Cloud Functions
 - **Google Sign-In requires SHA-1** — each team member must add their debug SHA-1 to Firebase (see step 3 above)
-- **Admin panel image uploads** go directly to Firebase Storage — no IP addresses to configure
+- **Admin panel** is in a separate repo — [https://github.com/SMDTS/esport-tournament-admin](https://github.com/SMDTS/esport-tournament-admin)
 - **User data** is saved to Firestore `users/{uid}` on registration with `role: "user"` — upgrade to `"admin"` manually for admin panel access
 - The `.env` file in `server/` is kept for reference only — the app no longer uses the Express server
