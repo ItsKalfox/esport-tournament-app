@@ -59,3 +59,9 @@ windows/flutter/generated_plugin_registrant.cc
 windows/flutter/generated_plugin_registrant.h
 windows/flutter/generated_plugins.cmake
 windows/flutter/generated_*
+
+# Config files with secrets
+lib/config/youtube_config.dart
+
+#server
+server/node_modules/
